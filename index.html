@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Plate</title>
+  
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Plate">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    :root {
+      --orange: #FF6B35;
+      --orange-dark: #E85A2A;
+    }
+
+    body {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      background: #0a0a0a;
+    }
+    
+    .tab-content {
+      padding-bottom: 80px;
+    }
+    
+    .orange-accent {
+      color: var(--orange);
+    }
+    
+    .orange-bg {
+      background: var(--orange);
+    }
+    
+    .orange-bg:active {
+      background: var(--orange-dark);
+    }
+    
+    .checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--orange);
+      border-radius: 50%;
+      display: inline-block;
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    .checkbox.checked {
+      background-color: var(--orange);
+      border-color: var(--orange);
+    }
+    
+    .checkbox.checked::after {
+      content: '✓';
+      position: absolute;
+      color: white;
+      font-size: 16px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .meal-card {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+    }
+
+    .meal-card:active {
+      transform: scale(0.98);
+    }
+
+    .recipe-modal {
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .recipe-section {
+      margin-bottom: 2rem;
+    }
+
+    .recipe-section h3 {
+      color: var(--orange);
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .recipe-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .recipe-list li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .recipe-list li:last-child {
+      border-bottom: none;
+    }
+
+    .recipe-list li::before {
+      content: '•';
+      color: var(--orange);
+      font-size: 1.5rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .instruction-number {
+      background: var(--orange);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="bg-black text-white">
+
+  <!-- Main Container -->
+  <div id="app" class="max-w-2xl mx-auto min-h-screen flex flex-col">
+    
+    <!-- Tab Content -->
+    <div class="flex-1 overflow-y-auto tab-content">
+      
+      <!-- MEALS TAB -->
+      <div id="meals-tab" class="tab-panel">
+        <!-- Header -->
+        <div class="sticky top-0 bg-black z-10 p-4 border-b border-gray-800">
+          <h1 class="text-3xl font-bold mb-1">Plate</h1>
+          <p class="text-gray-400 text-sm" id="current-date"></p>
+        </div>
+        
+        <!-- Today's Meals -->
+        <div id="meals-container" class="p-4 space-y-3">
+          <!-- Meals will be rendered here -->
+        </div>
+      </div>
+      
+      <!-- SHOPPING TAB -->
+      <div id="shopping-tab" class="tab-panel hidden">
+        <div class="sticky top-0 bg-black z-10 p-4 border-b border-gray-800">
+          <h1 class="text-3xl font-bold mb-1">Shopping</h1>
+          <p class="text-gray-400 text-sm" id="shopping-week-label"></p>
+        </div>
+        <div id="shopping-list-container" class="p-4">
+          <!-- Shopping list will be rendered here -->
+        </div>
+      </div>
+      
+      <!-- SETTINGS TAB -->
+      <div id="settings-tab" class="tab-panel hidden">
+        <div class="p-4">
+          <h1 class="text-3xl font-bold mb-4">Settings</h1>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium mb-2 text-gray-400">Current Week (Auto-synced to seasons)</label>
+            <div class="flex gap-2 mb-2">
+              <select id="season-select" class="flex-1 p-3 rounded-xl bg-zinc-900 border border-gray-700 text-base">
+                <option>Spring</option>
+                <option>Summer</option>
+                <option>Autumn</option>
+                <option>Winter</option>
+              </select>
+              <select id="week-select" class="flex-1 p-3 rounded-xl bg-zinc-900 border border-gray-700 text-base">
+                <option>Week 1</option>
+                <option>Week 2</option>
+                <option>Week 3</option>
+                <option>Week 4</option>
+              </select>
+            </div>
+            <p class="text-xs text-gray-500">🌸 Spring: Mar 20 • ☀️ Summer: Jun 21 • 🍂 Autumn: Sep 22 • ❄️ Winter: Dec 21</p>
+            <p class="text-xs text-gray-500">Each season cycles through 4 weeks, 3 times (84 days). Remaining days are free days.</p>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium mb-2 text-gray-400">Data Editor</label>
+            <textarea id="data-editor" class="w-full h-96 p-3 rounded-xl bg-zinc-900 border border-gray-700 font-mono text-sm" placeholder="Paste your JSON here..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="save-data-btn" class="flex-1 orange-bg text-white p-3 rounded-xl font-medium">Save & Reload</button>
+              <button id="reset-data-btn" class="flex-1 bg-red-600 text-white p-3 rounded-xl font-medium active:bg-red-700">Reset</button>
+            </div>
+          </div>
+          
+          <div class="text-xs text-gray-500 p-4 bg-zinc-900 rounded-xl border border-gray-800">
+            <p class="font-semibold mb-2">💡 For iPhone localStorage:</p>
+            <p>1. Copy this HTML file to your device</p>
+            <p>2. Find the 3 commented lines marked "UNCOMMENT FOR LOCALSTORAGE"</p>
+            <p>3. Remove the // at the start of each line</p>
+            <p>4. Open in Safari and add to home screen</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom Tab Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-gray-800 safe-area-inset-bottom">
+      <div class="max-w-2xl mx-auto flex">
+        <button class="tab-btn flex-1 p-4 flex flex-col items-center gap-1 orange-accent" data-tab="meals">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+          </svg>
+          <span class="text-xs">Today</span>
+        </button>
+        <button class="tab-btn flex-1 p-4 flex flex-col items-center gap-1 text-gray-500" data-tab="shopping">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+          </svg>
+          <span class="text-xs">Shopping</span>
+        </button>
+        <button class="tab-btn flex-1 p-4 flex flex-col items-center gap-1 text-gray-500" data-tab="settings">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-xs">Settings</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Full Screen Recipe Modal -->
+  <div id="recipe-modal" class="hidden fixed inset-0 z-50 bg-black recipe-modal overflow-y-auto">
+    <div class="min-h-screen">
+      <div class="sticky top-0 bg-black/90 backdrop-blur-lg p-4 border-b border-gray-800 flex items-center gap-3 z-10">
+        <button id="close-modal" class="text-3xl leading-none">&larr;</button>
+        <h2 id="modal-title" class="text-xl font-semibold flex-1"></h2>
+      </div>
+      <div id="modal-content" class="p-6"></div>
+    </div>
+  </div>
+
+  <script>
+    // DEFAULT DATA STRUCTURE
+    const DEFAULT_DATA = {
+      "Spring": {
+        "Week 1": {
+          "Monday": {
+            "Breakfast": { "name": "Berry Smoothie Bowl", "recipe": "Ingredients:\n- 1 cup mixed berries\n- 1 banana\n- 1/2 cup Greek yogurt\n- Granola\n- Honey\n\nInstructions:\n1. Blend berries, banana, and yogurt until smooth\n2. Pour into bowl\n3. Top with granola and drizzle of honey" },
+            "Lunch": { "name": "Spring Salad", "recipe": "Ingredients:\n- Mixed greens\n- Cherry tomatoes\n- Cucumber\n- Feta cheese\n- Lemon vinaigrette\n\nInstructions:\n1. Toss all ingredients together\n2. Drizzle with vinaigrette" },
+            "Snack": { "name": "Hummus & Veggies", "recipe": "Ingredients:\n- Hummus\n- Carrots\n- Celery\n- Bell peppers\n\nInstructions:\n1. Slice vegetables into sticks\n2. Serve with hummus for dipping" },
+            "Dinner": { "name": "Lemon Herb Chicken", "recipe": "Ingredients:\n- Chicken breast\n- Lemon\n- Fresh herbs (thyme, rosemary)\n- Olive oil\n- Asparagus\n\nInstructions:\n1. Marinate chicken in lemon juice and herbs\n2. Grill for 6-7 minutes per side\n3. Serve with roasted asparagus" }
+          },
+          "Tuesday": {
+            "Breakfast": { "name": "Avocado Toast", "recipe": "Ingredients:\n- Whole grain bread\n- Avocado\n- Cherry tomatoes\n- Red pepper flakes\n- Lime\n\nInstructions:\n1. Toast bread until golden\n2. Mash avocado with lime juice\n3. Spread on toast\n4. Top with sliced tomatoes and pepper flakes" },
+            "Lunch": { "name": "Quinoa Buddha Bowl", "recipe": "Ingredients:\n- Quinoa\n- Chickpeas\n- Roasted vegetables\n- Tahini dressing\n\nInstructions:\n1. Cook quinoa according to package\n2. Arrange with chickpeas and vegetables\n3. Drizzle with tahini dressing" },
+            "Snack": { "name": "Apple Slices & Almond Butter", "recipe": "Ingredients:\n- 1 apple\n- 2 tbsp almond butter\n\nInstructions:\n1. Slice apple into wedges\n2. Serve with almond butter for dipping" },
+            "Dinner": { "name": "Salmon with Spring Vegetables", "recipe": "Ingredients:\n- Salmon fillet\n- Baby potatoes\n- Green beans\n- Dill\n- Lemon\n\nInstructions:\n1. Bake salmon at 400°F for 15 minutes\n2. Roast vegetables alongside\n3. Garnish with dill and lemon" }
+          },
+          "Wednesday": {
+            "Breakfast": { "name": "Greek Yogurt Parfait", "recipe": "Ingredients:\n- Greek yogurt\n- Granola\n- Fresh berries\n- Honey\n\nInstructions:\n1. Layer yogurt in a glass\n2. Add granola and berries\n3. Drizzle with honey" },
+            "Lunch": { "name": "Mediterranean Wrap", "recipe": "Ingredients:\n- Whole wheat wrap\n- Grilled chicken\n- Lettuce\n- Tomatoes\n- Tzatziki sauce\n\nInstructions:\n1. Fill wrap with all ingredients\n2. Roll tightly\n3. Slice in half" },
+            "Snack": { "name": "Trail Mix", "recipe": "Ingredients:\n- Almonds\n- Walnuts\n- Dried cranberries\n- Dark chocolate chips\n\nInstructions:\n1. Mix all ingredients in a bowl\n2. Store in airtight container" },
+            "Dinner": { "name": "Vegetable Stir-Fry", "recipe": "Ingredients:\n- Mixed vegetables (broccoli, peppers, snap peas)\n- Tofu\n- Soy sauce\n- Ginger\n- Brown rice\n\nInstructions:\n1. Stir-fry vegetables and tofu in wok\n2. Add soy sauce and ginger\n3. Serve over brown rice" }
+          },
+          "Thursday": {
+            "Breakfast": { "name": "Oatmeal with Berries", "recipe": "Ingredients:\n- Rolled oats\n- Milk\n- Mixed berries\n- Cinnamon\n- Maple syrup\n\nInstructions:\n1. Cook oats in milk\n2. Top with berries and cinnamon\n3. Drizzle with maple syrup" },
+            "Lunch": { "name": "Caprese Sandwich", "recipe": "Ingredients:\n- Ciabatta bread\n- Fresh mozzarella\n- Tomatoes\n- Basil\n- Balsamic glaze\n\nInstructions:\n1. Layer mozzarella, tomatoes, and basil on bread\n2. Drizzle with balsamic glaze" },
+            "Snack": { "name": "Energy Balls", "recipe": "Ingredients:\n- Dates\n- Almonds\n- Coconut flakes\n- Cocoa powder\n\nInstructions:\n1. Blend all ingredients\n2. Roll into balls\n3. Refrigerate" },
+            "Dinner": { "name": "Turkey Meatballs & Zucchini Noodles", "recipe": "Ingredients:\n- Ground turkey\n- Herbs\n- Zucchini\n- Marinara sauce\n\nInstructions:\n1. Form meatballs and bake at 375°F for 20 minutes\n2. Spiralize zucchini\n3. Serve meatballs over zoodles with sauce" }
+          },
+          "Friday": {
+            "Breakfast": { "name": "Veggie Omelet", "recipe": "Ingredients:\n- 3 eggs\n- Spinach\n- Mushrooms\n- Bell peppers\n- Cheese\n\nInstructions:\n1. Whisk eggs\n2. Cook vegetables in pan\n3. Add eggs and fold omelet when set" },
+            "Lunch": { "name": "Asian Chicken Salad", "recipe": "Ingredients:\n- Shredded cabbage\n- Grilled chicken\n- Mandarin oranges\n- Sesame ginger dressing\n- Almonds\n\nInstructions:\n1. Toss all ingredients together with dressing\n2. Top with almonds" },
+            "Snack": { "name": "Rice Cakes with Nut Butter", "recipe": "Ingredients:\n- Rice cakes\n- Peanut butter\n- Banana slices\n\nInstructions:\n1. Spread nut butter on rice cakes\n2. Top with banana slices" },
+            "Dinner": { "name": "Shrimp Tacos", "recipe": "Ingredients:\n- Shrimp\n- Corn tortillas\n- Cabbage slaw\n- Avocado\n- Lime crema\n\nInstructions:\n1. Sauté shrimp with taco seasoning\n2. Warm tortillas\n3. Fill with shrimp, slaw, avocado, and crema" }
+          },
+          "Saturday": {
+            "Breakfast": { "name": "Banana Pancakes", "recipe": "Ingredients:\n- 2 bananas\n- 2 eggs\n- Cinnamon\n- Maple syrup\n\nInstructions:\n1. Mash bananas and mix with eggs\n2. Cook small pancakes on griddle\n3. Serve with syrup" },
+            "Lunch": { "name": "Chicken Caesar Salad", "recipe": "Ingredients:\n- Romaine lettuce\n- Grilled chicken\n- Parmesan\n- Croutons\n- Caesar dressing\n\nInstructions:\n1. Toss lettuce with dressing\n2. Top with chicken, parmesan, and croutons" },
+            "Snack": { "name": "Fruit Salad", "recipe": "Ingredients:\n- Strawberries\n- Grapes\n- Pineapple\n- Blueberries\n- Mint\n\nInstructions:\n1. Chop fruit and mix together\n2. Garnish with fresh mint" },
+            "Dinner": { "name": "Grilled Steak & Sweet Potato", "recipe": "Ingredients:\n- Sirloin steak\n- Sweet potato\n- Asparagus\n- Garlic butter\n\nInstructions:\n1. Grill steak to desired doneness\n2. Bake sweet potato\n3. Roast asparagus with garlic butter" }
+          },
+          "Sunday": {
+            "Breakfast": { "name": "French Toast", "recipe": "Ingredients:\n- Brioche bread\n- Eggs\n- Milk\n- Cinnamon\n- Berries\n\nInstructions:\n1. Whisk eggs, milk, and cinnamon\n2. Dip bread and cook on griddle\n3. Top with berries" },
+            "Lunch": { "name": "Veggie Pizza", "recipe": "Ingredients:\n- Pizza dough\n- Marinara\n- Mozzarella\n- Bell peppers\n- Mushrooms\n- Olives\n\nInstructions:\n1. Spread sauce on dough\n2. Add cheese and vegetables\n3. Bake at 450°F for 12-15 minutes" },
+            "Snack": { "name": "Cheese & Crackers", "recipe": "Ingredients:\n- Assorted cheeses\n- Whole grain crackers\n- Grapes\n\nInstructions:\n1. Arrange cheese, crackers, and grapes on plate" },
+            "Dinner": { "name": "Herb Roasted Chicken & Vegetables", "recipe": "Ingredients:\n- Whole chicken\n- Potatoes\n- Carrots\n- Onions\n- Fresh herbs\n\nInstructions:\n1. Roast chicken at 425°F for 1 hour\n2. Add vegetables halfway through\n3. Season with herbs" }
+          },
+          "shopping_list": [
+            "Mixed berries",
+            "Bananas",
+            "Greek yogurt",
+            "Granola",
+            "Chicken breast",
+            "Salmon fillet",
+            "Shrimp",
+            "Ground turkey",
+            "Eggs",
+            "Mixed greens",
+            "Avocados",
+            "Cherry tomatoes",
+            "Cucumbers",
+            "Bell peppers",
+            "Asparagus",
+            "Zucchini",
+            "Fresh herbs",
+            "Lemons/limes",
+            "Whole grain bread",
+            "Quinoa",
+            "Brown rice",
+            "Hummus"
+          ]
+        },
+        "Week 2": {
+          "Monday": {
+            "Breakfast": { "name": "Green Smoothie", "recipe": "Sample recipe for Week 2" },
+            "Lunch": { "name": "Turkey Wrap", "recipe": "Sample recipe" },
+            "Snack": { "name": "Nuts", "recipe": "Sample recipe" },
+            "Dinner": { "name": "Pasta Primavera", "recipe": "Sample recipe" }
+          },
+          "Tuesday": { "Breakfast": { "name": "Bagel", "recipe": "" }, "Lunch": { "name": "Soup", "recipe": "" }, "Snack": { "name": "Yogurt", "recipe": "" }, "Dinner": { "name": "Fish", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Cereal", "recipe": "" }, "Lunch": { "name": "Sandwich", "recipe": "" }, "Snack": { "name": "Fruit", "recipe": "" }, "Dinner": { "name": "Chicken", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Toast", "recipe": "" }, "Lunch": { "name": "Salad", "recipe": "" }, "Snack": { "name": "Crackers", "recipe": "" }, "Dinner": { "name": "Beef", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Muffin", "recipe": "" }, "Lunch": { "name": "Leftovers", "recipe": "" }, "Snack": { "name": "Veggies", "recipe": "" }, "Dinner": { "name": "Pizza", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Waffles", "recipe": "" }, "Lunch": { "name": "Burger", "recipe": "" }, "Snack": { "name": "Popcorn", "recipe": "" }, "Dinner": { "name": "Steak", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Brunch", "recipe": "" }, "Lunch": { "name": "Pasta", "recipe": "" }, "Snack": { "name": "Ice cream", "recipe": "" }, "Dinner": { "name": "Roast", "recipe": "" } },
+          "shopping_list": ["Items for Week 2"]
+        },
+        "Week 3": {
+          "Monday": { "Breakfast": { "name": "Breakfast 3", "recipe": "" }, "Lunch": { "name": "Lunch 3", "recipe": "" }, "Snack": { "name": "Snack 3", "recipe": "" }, "Dinner": { "name": "Dinner 3", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": ["Items for Week 3"]
+        },
+        "Week 4": {
+          "Monday": { "Breakfast": { "name": "Breakfast 4", "recipe": "" }, "Lunch": { "name": "Lunch 4", "recipe": "" }, "Snack": { "name": "Snack 4", "recipe": "" }, "Dinner": { "name": "Dinner 4", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": ["Items for Week 4"]
+        }
+      },
+      "Summer": {
+        "Week 1": {
+          "Monday": { "Breakfast": { "name": "Summer Breakfast", "recipe": "" }, "Lunch": { "name": "Summer Lunch", "recipe": "" }, "Snack": { "name": "Summer Snack", "recipe": "" }, "Dinner": { "name": "Summer Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": ["Summer items"]
+        },
+        "Week 2": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 3": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 4": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        }
+      },
+      "Autumn": {
+        "Week 1": {
+          "Monday": { "Breakfast": { "name": "Autumn Breakfast", "recipe": "" }, "Lunch": { "name": "Autumn Lunch", "recipe": "" }, "Snack": { "name": "Autumn Snack", "recipe": "" }, "Dinner": { "name": "Autumn Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": ["Autumn items"]
+        },
+        "Week 2": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 3": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 4": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        }
+      },
+      "Winter": {
+        "Week 1": {
+          "Monday": { "Breakfast": { "name": "Winter Breakfast", "recipe": "" }, "Lunch": { "name": "Winter Lunch", "recipe": "" }, "Snack": { "name": "Winter Snack", "recipe": "" }, "Dinner": { "name": "Winter Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": ["Winter items"]
+        },
+        "Week 2": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 3": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        },
+        "Week 4": {
+          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
+          "shopping_list": []
+        }
+      }
+    };
+
+    // ========================================
+    // DATA STORAGE (IN-MEMORY FOR CLAUDE.AI)
+    // ========================================
+    let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    let checkedItems = {};
+
+    // UNCOMMENT THESE 3 LINES FOR LOCALSTORAGE ON YOUR IPHONE:
+    // const storedData = localStorage.getItem('plate_data');
+    // if (storedData) appData = JSON.parse(storedData);
+    // const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
+
+    // ========================================
+    // STATE
+    // ========================================
+    let currentSeason = 'Spring';
+    let currentWeek = 'Week 1';
+    let currentTab = 'meals';
+
+    // ========================================
+    // AUTO DATE SYNC
+    // ========================================
+    function getCurrentSeason() {
+      const now = new Date();
+      const month = now.getMonth();
+      const day = now.getDate();
+      
+      // Approximate season start dates
+      if ((month === 2 && day >= 20) || month === 3 || month === 4 || (month === 5 && day < 21)) {
+        return { season: 'Spring', startMonth: 2, startDay: 20 };
+      }
+      if ((month === 5 && day >= 21) || month === 6 || month === 7 || (month === 8 && day < 22)) {
+        return { season: 'Summer', startMonth: 5, startDay: 21 };
+      }
+      if ((month === 8 && day >= 22) || month === 9 || month === 10 || (month === 11 && day < 21)) {
+        return { season: 'Autumn', startMonth: 8, startDay: 22 };
+      }
+      return { season: 'Winter', startMonth: 11, startDay: 21 };
+    }
+
+    function getDaysIntoSeason() {
+      const now = new Date();
+      const { season, startMonth, startDay } = getCurrentSeason();
+      
+      // Calculate season start date for current year
+      let year = now.getFullYear();
+      if (season === 'Winter' && now.getMonth() < 6) {
+        year--; // Winter spans across years
+      }
+      
+      const seasonStart = new Date(year, startMonth, startDay);
+      const diffTime = now - seasonStart;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to make it 1-indexed
+      
+      return diffDays;
+    }
+
+    function syncWithCalendar() {
+      const { season } = getCurrentSeason();
+      const daysInto = getDaysIntoSeason();
+      
+      // Each cycle is 28 days (4 weeks)
+      // We have 3 complete cycles (84 days), then free days
+      if (daysInto > 84) {
+        return { isFreeDay: true };
+      }
+      
+      // Determine which day within the current 28-day cycle
+      const dayInCycle = ((daysInto - 1) % 28) + 1;
+      
+      // Determine which week (1-4)
+      let week;
+      if (dayInCycle <= 7) week = 'Week 1';
+      else if (dayInCycle <= 14) week = 'Week 2';
+      else if (dayInCycle <= 21) week = 'Week 3';
+      else week = 'Week 4';
+      
+      currentSeason = season;
+      currentWeek = week;
+      
+      return { isFreeDay: false, season, week };
+    }
+
+    // ========================================
+    // UTILITY FUNCTIONS
+    // ========================================
+    function saveData() {
+      // UNCOMMENT FOR LOCALSTORAGE: localStorage.setItem('plate_data', JSON.stringify(appData));
+    }
+
+    function saveCheckedItems() {
+      // UNCOMMENT FOR LOCALSTORAGE: localStorage.setItem('plate_checked', JSON.stringify(checkedItems));
+    }
+
+    function getCurrentDay() {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days[new Date().getDay()];
+    }
+
+    function formatDate() {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date().toLocaleDateString('en-US', options);
+    }
+
+    function getWeekData() {
+      return appData[currentSeason]?.[currentWeek] || {};
+    }
+
+    function getTodayMeals() {
+      const today = getCurrentDay();
+      const weekData = getWeekData();
+      return weekData[today] || {};
+    }
+
+    function getShoppingList(season, week) {
+      return appData[season]?.[week]?.shopping_list || [];
+    }
+
+    function parseRecipe(recipeText) {
+      if (!recipeText) return '<p class="text-gray-400">No recipe available</p>';
+      
+      const lines = recipeText.split('\n').filter(line => line.trim());
+      let html = '';
+      let currentSection = '';
+      let items = [];
+
+      lines.forEach(line => {
+        if (line.includes('Ingredients:')) {
+          if (currentSection && items.length > 0) {
+            html += formatSection(currentSection, items);
+            items = [];
+          }
+          currentSection = 'Ingredients';
+        } else if (line.includes('Instructions:')) {
+          if (currentSection && items.length > 0) {
+            html += formatSection(currentSection, items);
+            items = [];
+          }
+          currentSection = 'Instructions';
+        } else if (line.trim().startsWith('-') || /^\d+\./.test(line.trim())) {
+          items.push(line.replace(/^[-\d.]\s*/, '').trim());
+        }
+      });
+
+      if (currentSection && items.length > 0) {
+        html += formatSection(currentSection, items);
+      }
+
+      return html || '<p class="text-gray-400">No recipe available</p>';
+    }
+
+    function formatSection(title, items) {
+      let html = `<div class="recipe-section">`;
+      html += `<h3>${title}</h3>`;
+      
+      if (title === 'Instructions') {
+        html += `<div class="space-y-3">`;
+        items.forEach((item, idx) => {
+          html += `
+            <div class="flex gap-3 items-start">
+              <div class="instruction-number">${idx + 1}</div>
+              <p class="text-gray-300 flex-1 pt-0.5">${item}</p>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      } else {
+        html += `<ul class="recipe-list">`;
+        items.forEach(item => {
+          html += `<li class="text-gray-300">${item}</li>`;
+        });
+        html += `</ul>`;
+      }
+      
+      html += `</div>`;
+      return html;
+    }
+
+    // ========================================
+    // RENDER FUNCTIONS
+    // ========================================
+    function renderMeals() {
+      const container = document.getElementById('meals-container');
+      document.getElementById('current-date').textContent = formatDate();
+      
+      const { isFreeDay } = syncWithCalendar();
+      
+      if (isFreeDay) {
+        const { season } = getCurrentSeason();
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-2xl font-bold mb-2">Free Day!</h2>
+            <p class="text-gray-400">Enjoy your day off from the meal plan</p>
+            <p class="text-sm text-gray-500 mt-4">You're in ${season} season, past day 84</p>
+            <p class="text-sm text-gray-500">The cycle will reset when the next season begins</p>
+          </div>
+        `;
+        return;
+      }
+
+      const todayMeals = getTodayMeals();
+      const meals = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+      
+      container.innerHTML = meals.map(meal => {
+        const mealData = todayMeals[meal] || { name: 'Not set', recipe: '' };
+        return `
+          <button class="meal-card w-full text-left p-6 rounded-2xl transition-transform meal-btn" data-meal="${meal}">
+            <div class="text-xs orange-accent uppercase tracking-wide mb-2">${meal}</div>
+            <div class="text-xl font-semibold">${mealData.name}</div>
+          </button>
+        `;
+      }).join('');
+
+      // Add event listeners
+      document.querySelectorAll('.meal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const meal = btn.dataset.meal;
+          showRecipeModal(meal);
+        });
+      });
+    }
+
+    function renderShoppingList() {
+      const container = document.getElementById('shopping-list-container');
+      document.getElementById('shopping-week-label').textContent = `${currentSeason} - ${currentWeek}`;
+      const list = getShoppingList(currentSeason, currentWeek);
+      const checkKey = `${currentSeason}-${currentWeek}`;
+      
+      if (!checkedItems[checkKey]) checkedItems[checkKey] = {};
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">No items in shopping list</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-2">
+          ${list.map((item, idx) => {
+            const isChecked = checkedItems[checkKey][idx] || false;
+            return `
+              <button class="shopping-item w-full flex items-center gap-3 p-4 rounded-xl bg-zinc-900 text-left transition-transform active:scale-98" data-idx="${idx}">
+                <div class="checkbox ${isChecked ? 'checked' : ''}"></div>
+                <span class="${isChecked ? 'line-through text-gray-500' : ''}">${item}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      // Add event listeners
+      document.querySelectorAll('.shopping-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = btn.dataset.idx;
+          checkedItems[checkKey][idx] = !checkedItems[checkKey][idx];
+          saveCheckedItems();
+          renderShoppingList();
+        });
+      });
+    }
+
+    function showRecipeModal(meal) {
+      const todayMeals = getTodayMeals();
+      const mealData = todayMeals[meal] || { name: 'Not set', recipe: '' };
+      
+      document.getElementById('modal-title').textContent = mealData.name;
+      document.getElementById('modal-content').innerHTML = parseRecipe(mealData.recipe);
+      document.getElementById('recipe-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeRecipeModal() {
+      document.getElementById('recipe-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function loadDataEditor() {
+      document.getElementById('data-editor').value = JSON.stringify(appData, null, 2);
+      document.getElementById('season-select').value = currentSeason;
+      document.getElementById('week-select').value = currentWeek;
+    }
+
+    // ========================================
+    // TAB SWITCHING
+    // ========================================
+    function switchTab(tabName) {
+      currentTab = tabName;
+      
+      // Hide all tabs
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+      
+      // Show selected tab
+      document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+      
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+          btn.classList.remove('text-gray-500');
+          btn.classList.add('orange-accent');
+        } else {
+          btn.classList.add('text-gray-500');
+          btn.classList.remove('orange-accent');
+        }
+      });
+
+      // Render content
+      if (tabName === 'meals') renderMeals();
+      if (tabName === 'shopping') renderShoppingList();
+      if (tabName === 'settings') loadDataEditor();
+    }
+
+    // ========================================
+    // EVENT LISTENERS
+    // ========================================
+    document.getElementById('season-select').addEventListener('change', (e) => {
+      currentSeason = e.target.value;
+      if (currentTab === 'shopping') renderShoppingList();
+    });
+
+    document.getElementById('week-select').addEventListener('change', (e) => {
+      currentWeek = e.target.value;
+      if (currentTab === 'shopping') renderShoppingList();
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    document.getElementById('close-modal').addEventListener('click', closeRecipeModal);
+
+    document.getElementById('recipe-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'recipe-modal') {
+        closeRecipeModal();
+      }
+    });
+
+    document.getElementById('save-data-btn').addEventListener('click', () => {
+      try {
+        const newData = JSON.parse(document.getElementById('data-editor').value);
+        appData = newData;
+        saveData();
+        alert('✅ Data saved successfully!');
+        renderMeals();
+        renderShoppingList();
+      } catch (e) {
+        alert('❌ Invalid JSON format. Please check your data.');
+      }
+    });
+
+    document.getElementById('reset-data-btn').addEventListener('click', () => {
+      if (confirm('Reset all data to default?')) {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        checkedItems = {};
+        saveData();
+        saveCheckedItems();
+        alert('✅ Data reset!');
+        loadDataEditor();
+        renderMeals();
+        renderShoppingList();
+      }
+    });
+
+    // ========================================
+    // INITIALIZE APP
+    // ========================================
+    renderMeals();
+  </script>
+</body>
+</html>
