@@ -28,7 +28,13 @@
     }
     
     .tab-content {
-      padding-bottom: 80px;
+      padding-bottom: 100px;
+    }
+    
+    @media (max-width: 768px) {
+      .tab-content {
+        padding-bottom: 120px;
+      }
     }
     
     .orange-accent {
@@ -497,7 +503,7 @@
     let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
     let checkedItems = {};
 
-    // UNCOMMENT THESE 3 LINES FOR LOCALSTORAGE ON YOUR IPHONE:
+    
     const storedData = localStorage.getItem('plate_data');
     if (storedData) appData = JSON.parse(storedData);
     const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
