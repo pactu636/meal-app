@@ -498,9 +498,9 @@
     let checkedItems = {};
 
     // UNCOMMENT THESE 3 LINES FOR LOCALSTORAGE ON YOUR IPHONE:
-    // const storedData = localStorage.getItem('plate_data');
-    // if (storedData) appData = JSON.parse(storedData);
-    // const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
+    const storedData = localStorage.getItem('plate_data');
+    if (storedData) appData = JSON.parse(storedData);
+    const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
 
     // ========================================
     // STATE
