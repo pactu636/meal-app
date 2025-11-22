@@ -856,6 +856,24 @@
     // INITIALIZE APP
     // ========================================
     renderMeals();
+    
+    // ========================================
+    // iOS KEYBOARD FIX
+    // ========================================
+    const dataEditor = document.getElementById('data-editor');
+    const tabBar = document.querySelector('.bottom-tab-bar');
+    
+    if (dataEditor && tabBar) {
+      dataEditor.addEventListener('focus', () => {
+        // Hide tab bar when keyboard appears
+        tabBar.style.display = 'none';
+      });
+      
+      dataEditor.addEventListener('blur', () => {
+        // Show tab bar when keyboard disappears
+        tabBar.style.display = 'block';
+      });
+    }
   </script>
 </body>
 </html>
