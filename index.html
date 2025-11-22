@@ -28,13 +28,7 @@
     }
     
     .tab-content {
-      padding-bottom: 100px;
-    }
-    
-    @media (max-width: 768px) {
-      .tab-content {
-        padding-bottom: 120px;
-      }
+      padding-bottom: 80px;
     }
     
     .orange-accent {
@@ -153,7 +147,7 @@
   <div id="app" class="max-w-2xl mx-auto min-h-screen flex flex-col">
     
     <!-- Tab Content -->
-    <div class="flex-1 overflow-y-auto tab-content">
+    <div class="flex-1 overflow-y-auto">
       
       <!-- MEALS TAB -->
       <div id="meals-tab" class="tab-panel">
@@ -175,14 +169,14 @@
           <h1 class="text-3xl font-bold mb-1">Shopping</h1>
           <p class="text-gray-400 text-sm" id="shopping-week-label"></p>
         </div>
-        <div id="shopping-list-container" class="p-4">
+        <div id="shopping-list-container" class="p-4" style="padding-bottom: calc(80px + env(safe-area-inset-bottom));">
           <!-- Shopping list will be rendered here -->
         </div>
       </div>
       
       <!-- SETTINGS TAB -->
       <div id="settings-tab" class="tab-panel hidden">
-        <div class="p-4">
+        <div class="p-4" style="padding-bottom: calc(80px + env(safe-area-inset-bottom));">
           <h1 class="text-3xl font-bold mb-4">Settings</h1>
           
           <div class="mb-6">
