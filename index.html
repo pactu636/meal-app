@@ -577,11 +577,11 @@
     // UTILITY FUNCTIONS
     // ========================================
     function saveData() {
-      // UNCOMMENT FOR LOCALSTORAGE: localStorage.setItem('plate_data', JSON.stringify(appData));
+      localStorage.setItem('plate_data', JSON.stringify(appData));
     }
 
     function saveCheckedItems() {
-      // UNCOMMENT FOR LOCALSTORAGE: localStorage.setItem('plate_checked', JSON.stringify(checkedItems));
+      localStorage.setItem('plate_checked', JSON.stringify(checkedItems));
     }
 
     function getCurrentDay() {
