@@ -176,7 +176,7 @@
       
       <!-- SETTINGS TAB -->
       <div id="settings-tab" class="tab-panel hidden">
-        <div class="p-4" style="padding-top: calc(env(safe-area-inset-top) + 1rem);">
+        <div class="p-4 overflow-y-auto" style="padding-top: calc(env(safe-area-inset-top) + 1rem); height: 100%; -ms-overflow-style: none; scrollbar-width: none;">
           <h1 class="text-3xl font-bold mb-4">Settings</h1>
           
           <div class="mb-6">
@@ -856,6 +856,21 @@
     // INITIALIZE APP
     // ========================================
     renderMeals();
+    
+    // ========================================
+    // FIX TAB BAR WHEN KEYBOARD APPEARS
+    // ========================================
+    const dataEditor = document.getElementById('data-editor');
+    
+    if (dataEditor) {
+      dataEditor.addEventListener('focus', () => {
+        document.body.classList.add('keyboard-open');
+      });
+      
+      dataEditor.addEventListener('blur', () => {
+        document.body.classList.remove('keyboard-open');
+      });
+    }
   </script>
 </body>
 </html>
