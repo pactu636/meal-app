@@ -79,26 +79,21 @@
 
     .recipe-modal {
       animation: slideUp 0.3s ease-out;
-      transition: transform 0.3s ease-out;
+      transition: none;
+      will-change: transform;
     }
 
-    .recipe-modal.swipe-out {
-      animation: none;
-      transform: translateX(100%);
+    .recipe-modal.animating {
+      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     }
 
     .tab-panel {
-      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+      transition: none;
+      will-change: transform, opacity;
     }
 
-    .tab-panel.swipe-left {
-      transform: translateX(-100%);
-      opacity: 0;
-    }
-
-    .tab-panel.swipe-right {
-      transform: translateX(100%);
-      opacity: 0;
+    .tab-panel.animating {
+      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out;
     }
 
     @keyframes slideUp {
@@ -931,70 +926,148 @@
     renderMeals();
     
     // ========================================
-    // SWIPE GESTURES
+    // SWIPE GESTURES WITH FINGER TRACKING
     // ========================================
     let touchStartX = 0;
-    let touchEndX = 0;
     let touchStartY = 0;
-    let touchEndY = 0;
+    let isDragging = false;
+    let currentTranslate = 0;
     
-    const minSwipeDistance = 50;
-    
-    function handleSwipe(element, onSwipeLeft, onSwipeRight) {
-      element.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-      });
-      
-      element.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = Math.abs(touchEndY - touchStartY);
-        
-        // Ignore if vertical swipe is dominant
-        if (deltaY > Math.abs(deltaX)) return;
-        
-        if (deltaX > minSwipeDistance && onSwipeRight) {
-          onSwipeRight();
-        } else if (deltaX < -minSwipeDistance && onSwipeLeft) {
-          onSwipeLeft();
-        }
-      });
-    }
-    
-    // Recipe modal swipe
+    // Recipe Modal Swipe (Right to Close)
     const recipeModal = document.getElementById('recipe-modal');
-    handleSwipe(recipeModal, null, () => {
-      recipeModal.classList.add('swipe-out');
-      setTimeout(() => {
-        closeRecipeModal();
-        recipeModal.classList.remove('swipe-out');
-      }, 300);
+    const modalContent = recipeModal.querySelector('div');
+    
+    recipeModal.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isDragging = false;
+      recipeModal.classList.remove('animating');
     });
     
-    // Tab switching swipe
-    const tabOrder = ['meals', 'shopping', 'settings'];
-    
-    handleSwipe(document.getElementById('app'), 
-      // Swipe left - next tab
-      () => {
-        if (document.getElementById('recipe-modal').classList.contains('hidden')) {
-          const currentIndex = tabOrder.indexOf(currentTab);
-          const nextIndex = (currentIndex + 1) % tabOrder.length;
-          switchTab(tabOrder[nextIndex]);
-        }
-      },
-      // Swipe right - previous tab
-      () => {
-        if (document.getElementById('recipe-modal').classList.contains('hidden')) {
-          const currentIndex = tabOrder.indexOf(currentTab);
-          const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
-          switchTab(tabOrder[prevIndex]);
+    recipeModal.addEventListener('touchmove', (e) => {
+      if (!isDragging) {
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+        const deltaX = e.touches[0].clientX - touchStartX;
+        
+        // Only start dragging if horizontal movement is dominant
+        if (Math.abs(deltaX) > deltaY && deltaX > 10) {
+          isDragging = true;
         }
       }
-    );
+      
+      if (isDragging) {
+        const deltaX = e.touches[0].clientX - touchStartX;
+        // Only allow right swipe (positive deltaX)
+        if (deltaX > 0) {
+          currentTranslate = deltaX;
+          recipeModal.style.transform = `translateX(${deltaX}px)`;
+          recipeModal.style.opacity = 1 - (deltaX / window.innerWidth) * 0.5;
+        }
+      }
+    });
+    
+    recipeModal.addEventListener('touchend', (e) => {
+      if (isDragging) {
+        recipeModal.classList.add('animating');
+        
+        // If swiped more than 40% of screen width, close
+        if (currentTranslate > window.innerWidth * 0.4) {
+          recipeModal.style.transform = 'translateX(100%)';
+          recipeModal.style.opacity = '0';
+          setTimeout(() => {
+            closeRecipeModal();
+            recipeModal.style.transform = '';
+            recipeModal.style.opacity = '';
+          }, 300);
+        } else {
+          // Snap back
+          recipeModal.style.transform = '';
+          recipeModal.style.opacity = '';
+        }
+        
+        isDragging = false;
+        currentTranslate = 0;
+      }
+    });
+    
+    // Tab Switching Swipe
+    const tabOrder = ['meals', 'shopping', 'settings'];
+    const appContainer = document.getElementById('app');
+    let tabTouchStartX = 0;
+    let tabTouchStartY = 0;
+    let isTabDragging = false;
+    
+    appContainer.addEventListener('touchstart', (e) => {
+      // Don't interfere with modal
+      if (!recipeModal.classList.contains('hidden')) return;
+      
+      tabTouchStartX = e.touches[0].clientX;
+      tabTouchStartY = e.touches[0].clientY;
+      isTabDragging = false;
+    });
+    
+    appContainer.addEventListener('touchmove', (e) => {
+      if (!recipeModal.classList.contains('hidden')) return;
+      
+      if (!isTabDragging) {
+        const deltaY = Math.abs(e.touches[0].clientY - tabTouchStartY);
+        const deltaX = e.touches[0].clientX - tabTouchStartX;
+        
+        if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+          isTabDragging = true;
+        }
+      }
+      
+      if (isTabDragging) {
+        const deltaX = e.touches[0].clientX - tabTouchStartX;
+        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
+        
+        // Apply transform with resistance at edges
+        const resistance = 0.5;
+        currentTabPanel.style.transform = `translateX(${deltaX * resistance}px)`;
+        currentTabPanel.style.opacity = 1 - Math.abs(deltaX) / window.innerWidth * 0.3;
+      }
+    });
+    
+    appContainer.addEventListener('touchend', (e) => {
+      if (!recipeModal.classList.contains('hidden')) return;
+      
+      if (isTabDragging) {
+        const deltaX = tabTouchStartX - e.changedTouches[0].clientX;
+        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
+        currentTabPanel.classList.add('animating');
+        
+        // Threshold: 30% of screen width
+        const threshold = window.innerWidth * 0.3;
+        
+        if (Math.abs(deltaX) > threshold) {
+          // Complete the swipe
+          if (deltaX > 0) {
+            // Swiped left - next tab
+            const currentIndex = tabOrder.indexOf(currentTab);
+            const nextIndex = (currentIndex + 1) % tabOrder.length;
+            switchTab(tabOrder[nextIndex]);
+          } else {
+            // Swiped right - previous tab
+            const currentIndex = tabOrder.indexOf(currentTab);
+            const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+            switchTab(tabOrder[prevIndex]);
+          }
+        } else {
+          // Snap back
+          currentTabPanel.style.transform = '';
+          currentTabPanel.style.opacity = '';
+        }
+        
+        setTimeout(() => {
+          currentTabPanel.classList.remove('animating');
+          currentTabPanel.style.transform = '';
+          currentTabPanel.style.opacity = '';
+        }, 300);
+        
+        isTabDragging = false;
+      }
+    });
   </script>
 </body>
 </html>
