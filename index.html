@@ -174,6 +174,18 @@
       font-size: 0.875rem;
       flex-shrink: 0;
     }
+
+    /* Hide all scrollbars */
+    .tab-panel::-webkit-scrollbar,
+    #modal-content::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .tab-panel,
+    #modal-content {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
 <body class="bg-black text-white">
@@ -920,8 +932,12 @@
 
     // RECIPE MODAL: Swipe right to close
     const recipeModal = document.getElementById('recipe-modal');
+    const modalContent = document.getElementById('modal-content');
     
     recipeModal.addEventListener('touchstart', (e) => {
+      // Only track swipes on the modal itself, not the scrollable content
+      if (e.target.closest('#modal-content')) return;
+      
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       isDragging = false;
@@ -929,6 +945,8 @@
     }, { passive: true });
     
     recipeModal.addEventListener('touchmove', (e) => {
+      if (e.target.closest('#modal-content')) return;
+      
       const deltaX = e.touches[0].clientX - touchStartX;
       const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
       
@@ -995,26 +1013,35 @@
       const deltaX = e.touches[0].clientX - tabStartX;
       const deltaY = Math.abs(e.touches[0].clientY - tabStartY);
       
-      if (!isTabSwiping && Math.abs(deltaX) > 20 && Math.abs(deltaX) > deltaY) {
-        isTabSwiping = true;
+      // Only start swiping if horizontal movement is significantly more than vertical
+      if (!isTabSwiping && Math.abs(deltaX) > 30 && Math.abs(deltaX) > deltaY * 1.5) {
         const currentIdx = tabOrder.indexOf(currentTab);
         
+        // Prevent circular navigation
         if (deltaX < 0) {
-          const nextIdx = (currentIdx + 1) % tabOrder.length;
+          // Swiping left - can't go left from Settings
+          if (currentIdx === tabOrder.length - 1) return;
+          
+          const nextIdx = currentIdx + 1;
           nextTab = document.getElementById(`${tabOrder[nextIdx]}-tab`);
           nextTab.classList.remove('hidden');
           nextTab.style.position = 'absolute';
           nextTab.style.top = '0';
           nextTab.style.left = '0';
           nextTab.style.width = '100%';
+          isTabSwiping = true;
         } else {
-          const prevIdx = (currentIdx - 1 + tabOrder.length) % tabOrder.length;
+          // Swiping right - can't go right from Today
+          if (currentIdx === 0) return;
+          
+          const prevIdx = currentIdx - 1;
           prevTab = document.getElementById(`${tabOrder[prevIdx]}-tab`);
           prevTab.classList.remove('hidden');
           prevTab.style.position = 'absolute';
           prevTab.style.top = '0';
           prevTab.style.left = '0';
           prevTab.style.width = '100%';
+          isTabSwiping = true;
         }
       }
       
@@ -1060,7 +1087,7 @@
             
             setTimeout(() => {
               const currentIdx = tabOrder.indexOf(currentTab);
-              const nextIdx = (currentIdx + 1) % tabOrder.length;
+              const nextIdx = currentIdx + 1;
               switchTab(tabOrder[nextIdx]);
               currentPanel.style.transform = '';
               currentPanel.style.opacity = '';
@@ -1081,7 +1108,7 @@
             
             setTimeout(() => {
               const currentIdx = tabOrder.indexOf(currentTab);
-              const prevIdx = (currentIdx - 1 + tabOrder.length) % tabOrder.length;
+              const prevIdx = currentIdx - 1;
               switchTab(tabOrder[prevIdx]);
               currentPanel.style.transform = '';
               currentPanel.style.opacity = '';
