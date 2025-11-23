@@ -685,7 +685,7 @@
           }
           currentSection = 'Instructions';
         } else if (line.trim().startsWith('-') || /^\d+\./.test(line.trim())) {
-          items.push(line.replace(/^[-\d.]\s*/, '').trim());
+          items.push(line.replace(/^[-\d.]+\s*/, '').trim());
         }
       });
 
