@@ -90,6 +90,41 @@
       }
     }
 
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .toast {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 2rem);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease-out;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      max-width: 90%;
+      transition: opacity 0.3s ease-out;
+    }
+
+    .toast.success {
+      border-color: var(--orange);
+    }
+
+    .toast.error {
+      border-color: #ef4444;
+    }
+
     .recipe-section {
       margin-bottom: 2rem;
     }
@@ -181,11 +216,12 @@
           
           <div class="mb-6">
             <label class="block text-sm font-medium mb-2 text-gray-400">Upload JSON File</label>
-            <label for="json-file-input" class="block w-full p-3 rounded-xl bg-zinc-900 border border-gray-700 text-center font-medium cursor-pointer mb-3 hover:bg-zinc-800">
+            <label for="json-file-input" class="block w-full p-3 rounded-xl bg-zinc-900 border border-gray-700 text-center font-medium cursor-pointer mb-2 hover:bg-zinc-800 active:bg-zinc-700">
               Choose File
             </label>
             <input type="file" id="json-file-input" accept=".json" class="hidden">
-            <button id="upload-json-btn" class="w-full orange-bg text-white p-3 rounded-xl font-medium mb-4">Upload & Load JSON</button>
+            <p id="file-name-display" class="text-sm text-gray-500 mb-3 text-center hidden"></p>
+            <button id="upload-json-btn" class="w-full orange-bg text-white p-3 rounded-xl font-medium">Upload & Load JSON</button>
           </div>
           
           <div class="mb-6">
@@ -557,6 +593,22 @@
     // ========================================
     // UTILITY FUNCTIONS
     // ========================================
+    function showToast(message, type = 'success') {
+      // Remove any existing toasts
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
     function saveData() {
       localStorage.setItem('plate_data', JSON.stringify(appData));
     }
@@ -778,6 +830,16 @@
     // ========================================
     // EVENT LISTENERS
     // ========================================
+    document.getElementById('json-file-input').addEventListener('change', (e) => {
+      const fileDisplay = document.getElementById('file-name-display');
+      if (e.target.files.length > 0) {
+        fileDisplay.textContent = `📄 ${e.target.files[0].name}`;
+        fileDisplay.classList.remove('hidden');
+      } else {
+        fileDisplay.classList.add('hidden');
+      }
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
@@ -796,7 +858,7 @@
         checkedItems = {};
         saveData();
         saveCheckedItems();
-        alert('✅ Data reset!');
+        showToast('Data reset to default', 'success');
         renderMeals();
         renderShoppingList();
       }
@@ -807,7 +869,7 @@
       const file = fileInput.files[0];
       
       if (!file) {
-        alert('❌ Please select a JSON file first');
+        showToast('Please select a JSON file first', 'error');
         return;
       }
       
@@ -817,12 +879,13 @@
           const newData = JSON.parse(e.target.result);
           appData = newData;
           saveData();
-          alert('✅ JSON file uploaded successfully!');
+          showToast('JSON loaded successfully!', 'success');
           renderMeals();
           renderShoppingList();
-          fileInput.value = ''; // Clear input
+          fileInput.value = '';
+          document.getElementById('file-name-display').classList.add('hidden');
         } catch (err) {
-          alert('❌ Invalid JSON file. Please check the format.');
+          showToast('Invalid JSON file format', 'error');
         }
       };
       reader.readAsText(file);
@@ -839,6 +902,7 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      showToast('Download started', 'success');
     });
 
     // ========================================
