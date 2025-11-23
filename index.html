@@ -180,28 +180,11 @@
           <h1 class="text-3xl font-bold mb-4">Settings</h1>
           
           <div class="mb-6">
-            <label class="block text-sm font-medium mb-2 text-gray-400">Current Week (Auto-synced to seasons)</label>
-            <div class="flex gap-2 mb-2">
-              <select id="season-select" class="flex-1 p-3 rounded-xl bg-zinc-900 border border-gray-700 text-base">
-                <option>Spring</option>
-                <option>Summer</option>
-                <option>Autumn</option>
-                <option>Winter</option>
-              </select>
-              <select id="week-select" class="flex-1 p-3 rounded-xl bg-zinc-900 border border-gray-700 text-base">
-                <option>Week 1</option>
-                <option>Week 2</option>
-                <option>Week 3</option>
-                <option>Week 4</option>
-              </select>
-            </div>
-            <p class="text-xs text-gray-500">🌸 Spring: Mar 20 • ☀️ Summer: Jun 21 • 🍂 Autumn: Sep 22 • ❄️ Winter: Dec 21</p>
-            <p class="text-xs text-gray-500">Each season cycles through 4 weeks, 3 times (84 days). Remaining days are free days.</p>
-          </div>
-
-          <div class="mb-6">
             <label class="block text-sm font-medium mb-2 text-gray-400">Upload JSON File</label>
-            <input type="file" id="json-file-input" accept=".json" class="w-full p-3 rounded-xl bg-zinc-900 border border-gray-700 text-base mb-3">
+            <label for="json-file-input" class="block w-full p-3 rounded-xl bg-zinc-900 border border-gray-700 text-center font-medium cursor-pointer mb-3 hover:bg-zinc-800">
+              Choose File
+            </label>
+            <input type="file" id="json-file-input" accept=".json" class="hidden">
             <button id="upload-json-btn" class="w-full orange-bg text-white p-3 rounded-xl font-medium mb-4">Upload & Load JSON</button>
           </div>
           
@@ -212,14 +195,6 @@
 
           <div class="mb-6">
             <button id="reset-data-btn" class="w-full bg-red-600 text-white p-3 rounded-xl font-medium active:bg-red-700">Reset to Default</button>
-          </div>
-          
-          <div class="text-xs text-gray-500 p-4 bg-zinc-900 rounded-xl border border-gray-800">
-            <p class="font-semibold mb-2">💡 For iPhone localStorage:</p>
-            <p>1. Copy this HTML file to your device</p>
-            <p>2. Find the 3 commented lines marked "UNCOMMENT FOR LOCALSTORAGE"</p>
-            <p>3. Remove the // at the start of each line</p>
-            <p>4. Open in Safari and add to home screen</p>
           </div>
         </div>
       </div>
@@ -253,8 +228,8 @@
   <!-- Full Screen Recipe Modal -->
   <div id="recipe-modal" class="hidden fixed inset-0 z-50 bg-black recipe-modal overflow-y-auto">
     <div class="min-h-screen">
-      <div class="sticky top-0 bg-black/90 backdrop-blur-lg p-4 border-b border-gray-800 flex items-center gap-3 z-10" style="padding-top: calc(env(safe-area-inset-top) + 1rem);">
-        <button id="close-modal" class="text-3xl leading-none">&larr;</button>
+      <div class="sticky top-0 bg-black/90 backdrop-blur-lg p-4 border-b border-gray-800 flex items-center gap-3 z-10" style="padding-top: calc(env(safe-area-inset-top) + 1.5rem); min-height: calc(env(safe-area-inset-top) + 4.5rem);">
+        <button id="close-modal" class="text-3xl leading-none p-2 -ml-2">&larr;</button>
         <h2 id="modal-title" class="text-xl font-semibold flex-1"></h2>
       </div>
       <div id="modal-content" class="p-6"></div>
@@ -798,25 +773,11 @@
       // Render content
       if (tabName === 'meals') renderMeals();
       if (tabName === 'shopping') renderShoppingList();
-      if (tabName === 'settings') {
-        document.getElementById('season-select').value = currentSeason;
-        document.getElementById('week-select').value = currentWeek;
-      }
     }
 
     // ========================================
     // EVENT LISTENERS
     // ========================================
-    document.getElementById('season-select').addEventListener('change', (e) => {
-      currentSeason = e.target.value;
-      if (currentTab === 'shopping') renderShoppingList();
-    });
-
-    document.getElementById('week-select').addEventListener('change', (e) => {
-      currentWeek = e.target.value;
-      if (currentTab === 'shopping') renderShoppingList();
-    });
-
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
