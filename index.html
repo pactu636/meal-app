@@ -177,12 +177,14 @@
 
     /* Hide all scrollbars */
     .tab-panel::-webkit-scrollbar,
-    #modal-content::-webkit-scrollbar {
+    #modal-content::-webkit-scrollbar,
+    #shopping-list-container::-webkit-scrollbar {
       display: none;
     }
     
     .tab-panel,
-    #modal-content {
+    #modal-content,
+    #shopping-list-container {
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
@@ -537,6 +539,7 @@
     let currentSeason = 'Spring';
     let currentWeek = 'Week 1';
     let currentTab = 'meals';
+    let shoppingScrollPosition = 0;
 
     // ========================================
     // AUTO DATE SYNC
@@ -794,6 +797,12 @@
           renderShoppingList();
         });
       });
+      
+      // Restore scroll position
+      setTimeout(() => {
+        const shoppingTab = document.getElementById('shopping-tab');
+        shoppingTab.scrollTop = shoppingScrollPosition;
+      }, 0);
     }
 
     function showRecipeModal(meal) {
@@ -815,6 +824,12 @@
     // TAB SWITCHING
     // ========================================
     function switchTab(tabName) {
+      // Save shopping scroll position when leaving
+      if (currentTab === 'shopping') {
+        const shoppingTab = document.getElementById('shopping-tab');
+        shoppingScrollPosition = shoppingTab.scrollTop;
+      }
+      
       currentTab = tabName;
       
       // Hide all tabs
@@ -1000,6 +1015,9 @@
 
     tabContent.addEventListener('touchstart', (e) => {
       if (!recipeModal.classList.contains('hidden')) return;
+      
+      // Disable tab swiping if touch starts in shopping list
+      if (e.target.closest('#shopping-list-container')) return;
       
       tabStartX = e.touches[0].clientX;
       tabStartY = e.touches[0].clientY;
