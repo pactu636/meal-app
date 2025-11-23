@@ -175,18 +175,25 @@
       flex-shrink: 0;
     }
 
-    /* Hide all scrollbars */
-    .tab-panel::-webkit-scrollbar,
-    #modal-content::-webkit-scrollbar,
-    #shopping-list-container::-webkit-scrollbar {
-      display: none;
+    /* Hide scrollbars for all scrollable elements */
+    * {
+      -ms-overflow-style: none !important;  /* IE and Edge */
+      scrollbar-width: none !important;  /* Firefox */
     }
     
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    
+    /* Ensure smooth scrolling on iOS */
     .tab-panel,
     #modal-content,
-    #shopping-list-container {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+    #shopping-list-container,
+    #shopping-tab {
+      -webkit-overflow-scrolling: touch;
+      overflow-y: auto;
     }
   </style>
 </head>
@@ -225,7 +232,7 @@
       
       <!-- SETTINGS TAB -->
       <div id="settings-tab" class="tab-panel hidden">
-        <div class="p-4 overflow-y-auto" style="padding-top: calc(env(safe-area-inset-top) + 2rem); height: 100%; -ms-overflow-style: none; scrollbar-width: none;">
+        <div class="p-4 overflow-y-auto" style="padding-top: calc(env(safe-area-inset-top) + 2rem); height: 100%;">
           <h1 class="text-3xl font-bold mb-4">Settings</h1>
           
           <div class="mb-6">
@@ -528,7 +535,7 @@
     let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
     let checkedItems = {};
 
-    // UNCOMMENT THESE 3 LINES FOR LOCALSTORAGE ON YOUR IPHONE:
+    //UNCOMMENT THESE 3 LINES FOR LOCALSTORAGE ON YOUR IPHONE:
     const storedData = localStorage.getItem('plate_data');
     if (storedData) appData = JSON.parse(storedData);
     const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
