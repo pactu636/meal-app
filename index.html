@@ -1,243 +1,4 @@
-// ========================================
-    // INITIALIZE APP
-    // ========================================
-    renderMeals();
-    
-    // ========================================
-    // SWIPE GESTURES WITH FINGER TRACKING
-    // ========================================
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isDragging = false;
-    let currentTranslate = 0;
-    
-    // Recipe Modal Swipe (Right to Close)
-    const recipeModal = document.getElementById('recipe-modal');
-    
-    recipeModal.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      isDragging = false;
-      recipeModal.classList.remove('animating');
-    });
-    
-    recipeModal.addEventListener('touchmove', (e) => {
-      if (!isDragging) {
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        const deltaX = e.touches[0].clientX - touchStartX;
-        
-        if (Math.abs(deltaX) > deltaY && deltaX > 10) {
-          isDragging = true;
-        }
-      }
-      
-      if (isDragging) {
-        const deltaX = e.touches[0].clientX - touchStartX;
-        if (deltaX > 0) {
-          currentTranslate = deltaX;
-          recipeModal.style.transform = `translateX(${deltaX}px)`;
-          recipeModal.style.opacity = 1 - (deltaX / window.innerWidth) * 0.5;
-        }
-      }
-    });
-    
-    recipeModal.addEventListener('touchend', (e) => {
-      if (isDragging) {
-        recipeModal.classList.add('animating');
-        
-        if (currentTranslate > window.innerWidth * 0.4) {
-          // Continue sliding out from current position
-          recipeModal.style.transform = 'translateX(100%)';
-          recipeModal.style.opacity = '0';
-          setTimeout(() => {
-            closeRecipeModal();
-            recipeModal.style.transform = '';
-            recipeModal.style.opacity = '';
-            recipeModal.classList.remove('animating');
-          }, 300);
-        } else {
-          // Snap back
-          recipeModal.style.transform = '';
-          recipeModal.style.opacity = '';
-          setTimeout(() => recipeModal.classList.remove('animating'), 300);
-        }
-        
-        isDragging = false;
-        currentTranslate = 0;
-      }
-    });
-    
-    // Tab Switching Swipe with Parallel Movement
-    const tabOrder = ['meals', 'shopping', 'settings'];
-    const appContainer = document.getElementById('app');
-    let tabTouchStartX = 0;
-    let tabTouchStartY = 0;
-    let isTabDragging = false;
-    let currentTabDelta = 0;
-    let nextTabElement = null;
-    let prevTabElement = null;
-    
-    appContainer.addEventListener('touchstart', (e) => {
-      if (!recipeModal.classList.contains('hidden')) return;
-      
-      tabTouchStartX = e.touches[0].clientX;
-      tabTouchStartY = e.touches[0].clientY;
-      isTabDragging = false;
-      currentTabDelta = 0;
-      
-      const currentTabPanel = document.getElementById(`${currentTab}-tab`);
-      currentTabPanel.classList.remove('animating');
-    });
-    
-    appContainer.addEventListener('touchmove', (e) => {
-      if (!recipeModal.classList.contains('hidden')) return;
-      
-      if (!isTabDragging) {
-        const deltaY = Math.abs(e.touches[0].clientY - tabTouchStartY);
-        const deltaX = e.touches[0].clientX - tabTouchStartX;
-        
-        if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
-          isTabDragging = true;
-          
-          // Prepare next/prev tabs
-          const currentIndex = tabOrder.indexOf(currentTab);
-          const nextIndex = (currentIndex + 1) % tabOrder.length;
-          const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
-          
-          nextTabElement = document.getElementById(`${tabOrder[nextIndex]}-tab`);
-          prevTabElement = document.getElementById(`${tabOrder[prevIndex]}-tab`);
-        }
-      }
-      
-      if (isTabDragging) {
-        const deltaX = e.touches[0].clientX - tabTouchStartX;
-        currentTabDelta = deltaX;
-        
-        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
-        const screenWidth = window.innerWidth;
-        
-        // Move current tab
-        currentTabPanel.style.transform = `translateX(${deltaX}px)`;
-        currentTabPanel.style.opacity = 1 - Math.abs(deltaX) / screenWidth * 0.5;
-        
-        // Show and move next/prev tab
-        if (deltaX < 0 && nextTabElement) {
-          // Swiping left - show next tab coming from right
-          nextTabElement.classList.remove('hidden');
-          nextTabElement.style.transform = `translateX(${screenWidth + deltaX}px)`;
-          nextTabElement.style.opacity = Math.abs(deltaX) / screenWidth;
-        } else if (deltaX > 0 && prevTabElement) {
-          // Swiping right - show prev tab coming from left
-          prevTabElement.classList.remove('hidden');
-          prevTabElement.style.transform = `translateX(${-screenWidth + deltaX}px)`;
-          prevTabElement.style.opacity = Math.abs(deltaX) / screenWidth;
-        }
-      }
-    });
-    
-    appContainer.addEventListener('touchend', (e) => {
-      if (!recipeModal.classList.contains('hidden')) return;
-      
-      if (isTabDragging) {
-        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
-        const screenWidth = window.innerWidth;
-        const threshold = screenWidth * 0.3;
-        
-        currentTabPanel.classList.add('animating');
-        
-        if (Math.abs(currentTabDelta) > threshold) {
-          // Complete the swipe
-          if (currentTabDelta < 0) {
-            // Swipe left - go to next tab
-            currentTabPanel.style.transform = `translateX(-${screenWidth}px)`;
-            currentTabPanel.style.opacity = '0';
-            
-            if (nextTabElement) {
-              nextTabElement.classList.add('animating');
-              nextTabElement.style.transform = 'translateX(0)';
-              nextTabElement.style.opacity = '1';
-            }
-            
-            setTimeout(() => {
-              const currentIndex = tabOrder.indexOf(currentTab);
-              const nextIndex = (currentIndex + 1) % tabOrder.length;
-              switchTab(tabOrder[nextIndex]);
-              
-              // Clean up
-              currentTabPanel.style.transform = '';
-              currentTabPanel.style.opacity = '';
-              currentTabPanel.classList.remove('animating');
-              if (nextTabElement) {
-                nextTabElement.style.transform = '';
-                nextTabElement.style.opacity = '';
-                nextTabElement.classList.remove('animating');
-              }
-            }, 300);
-          } else {
-            // Swipe right - go to previous tab
-            currentTabPanel.style.transform = `translateX(${screenWidth}px)`;
-            currentTabPanel.style.opacity = '0';
-            
-            if (prevTabElement) {
-              prevTabElement.classList.add('animating');
-              prevTabElement.style.transform = 'translateX(0)';
-              prevTabElement.style.opacity = '1';
-            }
-            
-            setTimeout(() => {
-              const currentIndex = tabOrder.indexOf(currentTab);
-              const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
-              switchTab(tabOrder[prevIndex]);
-              
-              // Clean up
-              currentTabPanel.style.transform = '';
-              currentTabPanel.style.opacity = '';
-              currentTabPanel.classList.remove('animating');
-              if (prevTabElement) {
-                prevTabElement.style.transform = '';
-                prevTabElement.style.opacity = '';
-                prevTabElement.classList.remove('animating');
-              }
-            }, 300);
-          }
-        } else {
-          // Snap back - didn't meet threshold
-          currentTabPanel.style.transform = '';
-          currentTabPanel.style.opacity = '';
-          
-          if (nextTabElement) {
-            nextTabElement.classList.add('animating');
-            nextTabElement.style.transform = `translateX(${screenWidth}px)`;
-            nextTabElement.style.opacity = '0';
-            setTimeout(() => {
-              nextTabElement.classList.add('hidden');
-              nextTabElement.style.transform = '';
-              nextTabElement.style.opacity = '';
-              nextTabElement.classList.remove('animating');
-            }, 300);
-          }
-          
-          if (prevTabElement) {
-            prevTabElement.classList.add('animating');
-            prevTabElement.style.transform = `translateX(-${screenWidth}px)`;
-            prevTabElement.style.opacity = '0';
-            setTimeout(() => {
-              prevTabElement.classList.add('hidden');
-              prevTabElement.style.transform = '';
-              prevTabElement.style.opacity = '';
-              prevTabElement.classList.remove('animating');
-            }, 300);
-          }
-          
-          setTimeout(() => currentTabPanel.classList.remove('animating'), 300);
-        }
-        
-        isTabDragging = false;
-        currentTabDelta = 0;
-        nextTabElement = null;
-        prevTabElement = null;
-      }
-    });<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -264,10 +25,12 @@
       -webkit-user-select: none;
       user-select: none;
       background: #0a0a0a;
-    }
-    
-    .tab-content {
-      padding-bottom: 80px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100vh;
     }
     
     .orange-accent {
@@ -314,69 +77,6 @@
 
     .meal-card:active {
       transform: scale(0.98);
-    }
-
-    .recipe-modal {
-      animation: slideUp 0.3s ease-out;
-      transition: none;
-      will-change: transform;
-    }
-
-    .recipe-modal.animating {
-      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    }
-
-    .tab-panel {
-      transition: none;
-      will-change: transform, opacity;
-    }
-
-    .tab-panel.animating {
-      transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out;
-    }
-
-    @keyframes slideUp {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .toast {
-      position: fixed;
-      top: calc(env(safe-area-inset-top) + 2rem);
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      padding: 1rem 1.5rem;
-      border-radius: 1rem;
-      z-index: 10000;
-      animation: fadeIn 0.3s ease-out;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      max-width: 90%;
-      transition: opacity 0.3s ease-out;
-    }
-
-    .toast.success {
-      border-color: var(--orange);
-    }
-
-    .toast.error {
-      border-color: #ef4444;
     }
 
     .recipe-section {
@@ -428,18 +128,55 @@
       font-size: 0.875rem;
       flex-shrink: 0;
     }
+
+    .toast {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 2rem);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      z-index: 10000;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      max-width: 90%;
+      opacity: 0;
+      transition: opacity 0.3s ease-out;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-color: var(--orange);
+    }
+
+    .toast.error {
+      border-color: #ef4444;
+    }
+
+    .tab-panel::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .tab-panel {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
 <body class="bg-black text-white">
 
   <!-- Main Container -->
-  <div id="app" class="max-w-2xl mx-auto min-h-screen flex flex-col">
+  <div id="app" class="max-w-2xl mx-auto h-full flex flex-col">
     
     <!-- Tab Content -->
-    <div class="flex-1 overflow-y-auto tab-content">
+    <div class="flex-1 overflow-hidden relative">
       
       <!-- MEALS TAB -->
-      <div id="meals-tab" class="tab-panel" style="overflow-y: auto; height: 100%;">
+      <div id="meals-tab" class="tab-panel absolute inset-0 overflow-y-auto">
         <!-- Header -->
         <div class="sticky top-0 bg-black z-10 p-4 border-b border-gray-800" style="padding-top: calc(env(safe-area-inset-top) + 2rem);">
           <h1 class="text-3xl font-bold mb-1">Plate</h1>
@@ -447,25 +184,25 @@
         </div>
         
         <!-- Today's Meals -->
-        <div id="meals-container" class="p-4 space-y-3">
+        <div id="meals-container" class="p-4 space-y-3 pb-24">
           <!-- Meals will be rendered here -->
         </div>
       </div>
       
       <!-- SHOPPING TAB -->
-      <div id="shopping-tab" class="tab-panel hidden" style="overflow-y: auto;">
+      <div id="shopping-tab" class="tab-panel absolute inset-0 overflow-y-auto hidden">
         <div class="sticky top-0 bg-black z-10 p-4 border-b border-gray-800" style="padding-top: calc(env(safe-area-inset-top) + 2rem);">
           <h1 class="text-3xl font-bold mb-1">Shopping</h1>
           <p class="text-gray-400 text-sm" id="shopping-week-label"></p>
         </div>
-        <div id="shopping-list-container" class="p-4">
+        <div id="shopping-list-container" class="p-4 pb-24">
           <!-- Shopping list will be rendered here -->
         </div>
       </div>
       
       <!-- SETTINGS TAB -->
-      <div id="settings-tab" class="tab-panel hidden" style="overflow-y: auto;">
-        <div class="p-4" style="padding-top: calc(env(safe-area-inset-top) + 2rem);">
+      <div id="settings-tab" class="tab-panel absolute inset-0 overflow-y-auto hidden">
+        <div class="p-4 pb-24" style="padding-top: calc(env(safe-area-inset-top) + 2rem);">
           <h1 class="text-3xl font-bold mb-4">Settings</h1>
           
           <div class="mb-6">
@@ -491,7 +228,7 @@
     </div>
     
     <!-- Bottom Tab Bar -->
-    <div class="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-gray-800 safe-area-inset-bottom">
+    <div class="bg-zinc-900 border-t border-gray-800 flex-shrink-0">
       <div class="max-w-2xl mx-auto flex">
         <button class="tab-btn flex-1 p-4 flex flex-col items-center gap-1 orange-accent" data-tab="meals">
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -516,7 +253,7 @@
   </div>
   
   <!-- Full Screen Recipe Modal -->
-  <div id="recipe-modal" class="hidden fixed inset-0 z-50 bg-black recipe-modal">
+  <div id="recipe-modal" class="hidden fixed inset-0 z-50 bg-black">
     <div class="h-full flex flex-col">
       <div class="sticky top-0 bg-black/90 backdrop-blur-lg p-4 border-b border-gray-800 flex items-center gap-3 z-10 flex-shrink-0" style="padding-top: calc(env(safe-area-inset-top) + 1.5rem); min-height: calc(env(safe-area-inset-top) + 4.5rem);">
         <button id="close-modal" class="text-3xl leading-none p-2 -ml-2">&larr;</button>
@@ -527,244 +264,48 @@
   </div>
 
   <script>
-    // DEFAULT DATA STRUCTURE
+    // DEFAULT DATA - Using the Spring Week 1 structure as default
     const DEFAULT_DATA = {
       "Spring": {
         "Week 1": {
           "Monday": {
-            "Breakfast": { "name": "Berry Smoothie Bowl", "recipe": "Ingredients:\n- 1 cup mixed berries\n- 1 banana\n- 1/2 cup Greek yogurt\n- Granola\n- Honey\n\nInstructions:\n1. Blend berries, banana, and yogurt until smooth\n2. Pour into bowl\n3. Top with granola and drizzle of honey" },
-            "Lunch": { "name": "Spring Salad", "recipe": "Ingredients:\n- Mixed greens\n- Cherry tomatoes\n- Cucumber\n- Feta cheese\n- Lemon vinaigrette\n\nInstructions:\n1. Toss all ingredients together\n2. Drizzle with vinaigrette" },
-            "Snack": { "name": "Hummus & Veggies", "recipe": "Ingredients:\n- Hummus\n- Carrots\n- Celery\n- Bell peppers\n\nInstructions:\n1. Slice vegetables into sticks\n2. Serve with hummus for dipping" },
-            "Dinner": { "name": "Lemon Herb Chicken", "recipe": "Ingredients:\n- Chicken breast\n- Lemon\n- Fresh herbs (thyme, rosemary)\n- Olive oil\n- Asparagus\n\nInstructions:\n1. Marinate chicken in lemon juice and herbs\n2. Grill for 6-7 minutes per side\n3. Serve with roasted asparagus" }
+            "Breakfast": { "name": "Greek Yogurt Power Bowl", "recipe": "Ingredients:\n- 2 cups Greek yogurt\n- 3 tbsp honey\n- 1/4 cup walnuts\n- Fresh mint leaves\n\nInstructions:\n1. Layer Greek yogurt in bowl\n2. Drizzle with honey\n3. Top with crushed walnuts and torn mint leaves" },
+            "Lunch": { "name": "Mediterranean Tuna Pita Bowl", "recipe": "Ingredients:\n- 2 cans tuna in olive oil\n- 2 whole wheat pitas, torn\n- Cherry tomatoes\n- Cucumber\n- Olives\n\nInstructions:\n1. Combine all ingredients\n2. Dress with olive oil and lemon" },
+            "Snack": { "name": "Hummus & Veggies", "recipe": "Ingredients:\n- Hummus\n- Veggie sticks\n- Feta\n\nInstructions:\n1. Serve all together" },
+            "Dinner": { "name": "Lemon Herb Salmon", "recipe": "Ingredients:\n- Salmon\n- Vegetables\n- Rice\n- Lemon, herbs\n\nInstructions:\n1. Roast vegetables\n2. Add salmon\n3. Serve over rice" }
           },
-          "Tuesday": {
-            "Breakfast": { "name": "Avocado Toast", "recipe": "Ingredients:\n- Whole grain bread\n- Avocado\n- Cherry tomatoes\n- Red pepper flakes\n- Lime\n\nInstructions:\n1. Toast bread until golden\n2. Mash avocado with lime juice\n3. Spread on toast\n4. Top with sliced tomatoes and pepper flakes" },
-            "Lunch": { "name": "Quinoa Buddha Bowl", "recipe": "Ingredients:\n- Quinoa\n- Chickpeas\n- Roasted vegetables\n- Tahini dressing\n\nInstructions:\n1. Cook quinoa according to package\n2. Arrange with chickpeas and vegetables\n3. Drizzle with tahini dressing" },
-            "Snack": { "name": "Apple Slices & Almond Butter", "recipe": "Ingredients:\n- 1 apple\n- 2 tbsp almond butter\n\nInstructions:\n1. Slice apple into wedges\n2. Serve with almond butter for dipping" },
-            "Dinner": { "name": "Salmon with Spring Vegetables", "recipe": "Ingredients:\n- Salmon fillet\n- Baby potatoes\n- Green beans\n- Dill\n- Lemon\n\nInstructions:\n1. Bake salmon at 400°F for 15 minutes\n2. Roast vegetables alongside\n3. Garnish with dill and lemon" }
-          },
-          "Wednesday": {
-            "Breakfast": { "name": "Greek Yogurt Parfait", "recipe": "Ingredients:\n- Greek yogurt\n- Granola\n- Fresh berries\n- Honey\n\nInstructions:\n1. Layer yogurt in a glass\n2. Add granola and berries\n3. Drizzle with honey" },
-            "Lunch": { "name": "Mediterranean Wrap", "recipe": "Ingredients:\n- Whole wheat wrap\n- Grilled chicken\n- Lettuce\n- Tomatoes\n- Tzatziki sauce\n\nInstructions:\n1. Fill wrap with all ingredients\n2. Roll tightly\n3. Slice in half" },
-            "Snack": { "name": "Trail Mix", "recipe": "Ingredients:\n- Almonds\n- Walnuts\n- Dried cranberries\n- Dark chocolate chips\n\nInstructions:\n1. Mix all ingredients in a bowl\n2. Store in airtight container" },
-            "Dinner": { "name": "Vegetable Stir-Fry", "recipe": "Ingredients:\n- Mixed vegetables (broccoli, peppers, snap peas)\n- Tofu\n- Soy sauce\n- Ginger\n- Brown rice\n\nInstructions:\n1. Stir-fry vegetables and tofu in wok\n2. Add soy sauce and ginger\n3. Serve over brown rice" }
-          },
-          "Thursday": {
-            "Breakfast": { "name": "Oatmeal with Berries", "recipe": "Ingredients:\n- Rolled oats\n- Milk\n- Mixed berries\n- Cinnamon\n- Maple syrup\n\nInstructions:\n1. Cook oats in milk\n2. Top with berries and cinnamon\n3. Drizzle with maple syrup" },
-            "Lunch": { "name": "Caprese Sandwich", "recipe": "Ingredients:\n- Ciabatta bread\n- Fresh mozzarella\n- Tomatoes\n- Basil\n- Balsamic glaze\n\nInstructions:\n1. Layer mozzarella, tomatoes, and basil on bread\n2. Drizzle with balsamic glaze" },
-            "Snack": { "name": "Energy Balls", "recipe": "Ingredients:\n- Dates\n- Almonds\n- Coconut flakes\n- Cocoa powder\n\nInstructions:\n1. Blend all ingredients\n2. Roll into balls\n3. Refrigerate" },
-            "Dinner": { "name": "Turkey Meatballs & Zucchini Noodles", "recipe": "Ingredients:\n- Ground turkey\n- Herbs\n- Zucchini\n- Marinara sauce\n\nInstructions:\n1. Form meatballs and bake at 375°F for 20 minutes\n2. Spiralize zucchini\n3. Serve meatballs over zoodles with sauce" }
-          },
-          "Friday": {
-            "Breakfast": { "name": "Veggie Omelet", "recipe": "Ingredients:\n- 3 eggs\n- Spinach\n- Mushrooms\n- Bell peppers\n- Cheese\n\nInstructions:\n1. Whisk eggs\n2. Cook vegetables in pan\n3. Add eggs and fold omelet when set" },
-            "Lunch": { "name": "Asian Chicken Salad", "recipe": "Ingredients:\n- Shredded cabbage\n- Grilled chicken\n- Mandarin oranges\n- Sesame ginger dressing\n- Almonds\n\nInstructions:\n1. Toss all ingredients together with dressing\n2. Top with almonds" },
-            "Snack": { "name": "Rice Cakes with Nut Butter", "recipe": "Ingredients:\n- Rice cakes\n- Peanut butter\n- Banana slices\n\nInstructions:\n1. Spread nut butter on rice cakes\n2. Top with banana slices" },
-            "Dinner": { "name": "Shrimp Tacos", "recipe": "Ingredients:\n- Shrimp\n- Corn tortillas\n- Cabbage slaw\n- Avocado\n- Lime crema\n\nInstructions:\n1. Sauté shrimp with taco seasoning\n2. Warm tortillas\n3. Fill with shrimp, slaw, avocado, and crema" }
-          },
-          "Saturday": {
-            "Breakfast": { "name": "Banana Pancakes", "recipe": "Ingredients:\n- 2 bananas\n- 2 eggs\n- Cinnamon\n- Maple syrup\n\nInstructions:\n1. Mash bananas and mix with eggs\n2. Cook small pancakes on griddle\n3. Serve with syrup" },
-            "Lunch": { "name": "Chicken Caesar Salad", "recipe": "Ingredients:\n- Romaine lettuce\n- Grilled chicken\n- Parmesan\n- Croutons\n- Caesar dressing\n\nInstructions:\n1. Toss lettuce with dressing\n2. Top with chicken, parmesan, and croutons" },
-            "Snack": { "name": "Fruit Salad", "recipe": "Ingredients:\n- Strawberries\n- Grapes\n- Pineapple\n- Blueberries\n- Mint\n\nInstructions:\n1. Chop fruit and mix together\n2. Garnish with fresh mint" },
-            "Dinner": { "name": "Grilled Steak & Sweet Potato", "recipe": "Ingredients:\n- Sirloin steak\n- Sweet potato\n- Asparagus\n- Garlic butter\n\nInstructions:\n1. Grill steak to desired doneness\n2. Bake sweet potato\n3. Roast asparagus with garlic butter" }
-          },
-          "Sunday": {
-            "Breakfast": { "name": "French Toast", "recipe": "Ingredients:\n- Brioche bread\n- Eggs\n- Milk\n- Cinnamon\n- Berries\n\nInstructions:\n1. Whisk eggs, milk, and cinnamon\n2. Dip bread and cook on griddle\n3. Top with berries" },
-            "Lunch": { "name": "Veggie Pizza", "recipe": "Ingredients:\n- Pizza dough\n- Marinara\n- Mozzarella\n- Bell peppers\n- Mushrooms\n- Olives\n\nInstructions:\n1. Spread sauce on dough\n2. Add cheese and vegetables\n3. Bake at 450°F for 12-15 minutes" },
-            "Snack": { "name": "Cheese & Crackers", "recipe": "Ingredients:\n- Assorted cheeses\n- Whole grain crackers\n- Grapes\n\nInstructions:\n1. Arrange cheese, crackers, and grapes on plate" },
-            "Dinner": { "name": "Herb Roasted Chicken & Vegetables", "recipe": "Ingredients:\n- Whole chicken\n- Potatoes\n- Carrots\n- Onions\n- Fresh herbs\n\nInstructions:\n1. Roast chicken at 425°F for 1 hour\n2. Add vegetables halfway through\n3. Season with herbs" }
-          },
-          "shopping_list": [
-            "Mixed berries",
-            "Bananas",
-            "Greek yogurt",
-            "Granola",
-            "Chicken breast",
-            "Salmon fillet",
-            "Shrimp",
-            "Ground turkey",
-            "Eggs",
-            "Mixed greens",
-            "Avocados",
-            "Cherry tomatoes",
-            "Cucumbers",
-            "Bell peppers",
-            "Asparagus",
-            "Zucchini",
-            "Fresh herbs",
-            "Lemons/limes",
-            "Whole grain bread",
-            "Quinoa",
-            "Brown rice",
-            "Hummus"
-          ]
-        },
-        "Week 2": {
-          "Monday": {
-            "Breakfast": { "name": "Green Smoothie", "recipe": "Sample recipe for Week 2" },
-            "Lunch": { "name": "Turkey Wrap", "recipe": "Sample recipe" },
-            "Snack": { "name": "Nuts", "recipe": "Sample recipe" },
-            "Dinner": { "name": "Pasta Primavera", "recipe": "Sample recipe" }
-          },
-          "Tuesday": { "Breakfast": { "name": "Bagel", "recipe": "" }, "Lunch": { "name": "Soup", "recipe": "" }, "Snack": { "name": "Yogurt", "recipe": "" }, "Dinner": { "name": "Fish", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Cereal", "recipe": "" }, "Lunch": { "name": "Sandwich", "recipe": "" }, "Snack": { "name": "Fruit", "recipe": "" }, "Dinner": { "name": "Chicken", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Toast", "recipe": "" }, "Lunch": { "name": "Salad", "recipe": "" }, "Snack": { "name": "Crackers", "recipe": "" }, "Dinner": { "name": "Beef", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Muffin", "recipe": "" }, "Lunch": { "name": "Leftovers", "recipe": "" }, "Snack": { "name": "Veggies", "recipe": "" }, "Dinner": { "name": "Pizza", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Waffles", "recipe": "" }, "Lunch": { "name": "Burger", "recipe": "" }, "Snack": { "name": "Popcorn", "recipe": "" }, "Dinner": { "name": "Steak", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Brunch", "recipe": "" }, "Lunch": { "name": "Pasta", "recipe": "" }, "Snack": { "name": "Ice cream", "recipe": "" }, "Dinner": { "name": "Roast", "recipe": "" } },
-          "shopping_list": ["Items for Week 2"]
-        },
-        "Week 3": {
-          "Monday": { "Breakfast": { "name": "Breakfast 3", "recipe": "" }, "Lunch": { "name": "Lunch 3", "recipe": "" }, "Snack": { "name": "Snack 3", "recipe": "" }, "Dinner": { "name": "Dinner 3", "recipe": "" } },
           "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
           "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
           "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
           "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
           "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
           "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": ["Items for Week 3"]
+          "shopping_list": []
         },
-        "Week 4": {
-          "Monday": { "Breakfast": { "name": "Breakfast 4", "recipe": "" }, "Lunch": { "name": "Lunch 4", "recipe": "" }, "Snack": { "name": "Snack 4", "recipe": "" }, "Dinner": { "name": "Dinner 4", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": ["Items for Week 4"]
-        }
+        "Week 2": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 3": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 4": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] }
       },
       "Summer": {
-        "Week 1": {
-          "Monday": { "Breakfast": { "name": "Summer Breakfast", "recipe": "" }, "Lunch": { "name": "Summer Lunch", "recipe": "" }, "Snack": { "name": "Summer Snack", "recipe": "" }, "Dinner": { "name": "Summer Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": ["Summer items"]
-        },
-        "Week 2": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 3": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 4": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        }
+        "Week 1": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 2": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 3": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 4": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] }
       },
       "Autumn": {
-        "Week 1": {
-          "Monday": { "Breakfast": { "name": "Autumn Breakfast", "recipe": "" }, "Lunch": { "name": "Autumn Lunch", "recipe": "" }, "Snack": { "name": "Autumn Snack", "recipe": "" }, "Dinner": { "name": "Autumn Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": ["Autumn items"]
-        },
-        "Week 2": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 3": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 4": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        }
+        "Week 1": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 2": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 3": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 4": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] }
       },
       "Winter": {
-        "Week 1": {
-          "Monday": { "Breakfast": { "name": "Winter Breakfast", "recipe": "" }, "Lunch": { "name": "Winter Lunch", "recipe": "" }, "Snack": { "name": "Winter Snack", "recipe": "" }, "Dinner": { "name": "Winter Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": ["Winter items"]
-        },
-        "Week 2": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 3": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        },
-        "Week 4": {
-          "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } },
-          "shopping_list": []
-        }
+        "Week 1": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 2": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 3": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] },
+        "Week 4": { "Monday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Tuesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Wednesday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Thursday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Friday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Saturday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "Sunday": { "Breakfast": { "name": "Breakfast", "recipe": "" }, "Lunch": { "name": "Lunch", "recipe": "" }, "Snack": { "name": "Snack", "recipe": "" }, "Dinner": { "name": "Dinner", "recipe": "" } }, "shopping_list": [] }
       }
     };
 
-    // ========================================
-    // DATA STORAGE (IN-MEMORY FOR CLAUDE.AI)
-    // ========================================
     let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
     let checkedItems = {};
 
@@ -773,22 +314,15 @@
     if (storedData) appData = JSON.parse(storedData);
     const storedChecked = localStorage.getItem('plate_checked'); if (storedChecked) checkedItems = JSON.parse(storedChecked);
 
-    // ========================================
-    // STATE
-    // ========================================
     let currentSeason = 'Spring';
     let currentWeek = 'Week 1';
     let currentTab = 'meals';
 
-    // ========================================
-    // AUTO DATE SYNC
-    // ========================================
     function getCurrentSeason() {
       const now = new Date();
       const month = now.getMonth();
       const day = now.getDate();
       
-      // Approximate season start dates
       if ((month === 2 && day >= 20) || month === 3 || month === 4 || (month === 5 && day < 21)) {
         return { season: 'Spring', startMonth: 2, startDay: 20 };
       }
@@ -805,15 +339,14 @@
       const now = new Date();
       const { season, startMonth, startDay } = getCurrentSeason();
       
-      // Calculate season start date for current year
       let year = now.getFullYear();
       if (season === 'Winter' && now.getMonth() < 6) {
-        year--; // Winter spans across years
+        year--;
       }
       
       const seasonStart = new Date(year, startMonth, startDay);
       const diffTime = now - seasonStart;
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to make it 1-indexed
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
       
       return diffDays;
     }
@@ -822,16 +355,12 @@
       const { season } = getCurrentSeason();
       const daysInto = getDaysIntoSeason();
       
-      // Each cycle is 28 days (4 weeks)
-      // We have 3 complete cycles (84 days), then free days
       if (daysInto > 84) {
         return { isFreeDay: true };
       }
       
-      // Determine which day within the current 28-day cycle
       const dayInCycle = ((daysInto - 1) % 28) + 1;
       
-      // Determine which week (1-4)
       let week;
       if (dayInCycle <= 7) week = 'Week 1';
       else if (dayInCycle <= 14) week = 'Week 2';
@@ -842,25 +371,6 @@
       currentWeek = week;
       
       return { isFreeDay: false, season, week };
-    }
-
-    // ========================================
-    // UTILITY FUNCTIONS
-    // ========================================
-    function showToast(message, type = 'success') {
-      // Remove any existing toasts
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 2500);
     }
 
     function saveData() {
@@ -955,9 +465,23 @@
       return html;
     }
 
-    // ========================================
-    // RENDER FUNCTIONS
-    // ========================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.classList.add('show'), 10);
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
     function renderMeals() {
       const container = document.getElementById('meals-container');
       document.getElementById('current-date').textContent = formatDate();
@@ -991,7 +515,6 @@
         `;
       }).join('');
 
-      // Add event listeners
       document.querySelectorAll('.meal-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const meal = btn.dataset.meal;
@@ -1027,7 +550,6 @@
         </div>
       `;
 
-      // Add event listeners
       document.querySelectorAll('.shopping-item').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = btn.dataset.idx;
@@ -1053,19 +575,12 @@
       document.body.style.overflow = '';
     }
 
-    // ========================================
-    // TAB SWITCHING
-    // ========================================
     function switchTab(tabName) {
       currentTab = tabName;
       
-      // Hide all tabs
       document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
-      
-      // Show selected tab
       document.getElementById(`${tabName}-tab`).classList.remove('hidden');
       
-      // Update tab buttons
       document.querySelectorAll('.tab-btn').forEach(btn => {
         if (btn.dataset.tab === tabName) {
           btn.classList.remove('text-gray-500');
@@ -1076,23 +591,9 @@
         }
       });
 
-      // Render content
       if (tabName === 'meals') renderMeals();
       if (tabName === 'shopping') renderShoppingList();
     }
-
-    // ========================================
-    // EVENT LISTENERS
-    // ========================================
-    document.getElementById('json-file-input').addEventListener('change', (e) => {
-      const fileDisplay = document.getElementById('file-name-display');
-      if (e.target.files.length > 0) {
-        fileDisplay.textContent = `📄 ${e.target.files[0].name}`;
-        fileDisplay.classList.remove('hidden');
-      } else {
-        fileDisplay.classList.add('hidden');
-      }
-    });
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -1106,15 +607,13 @@
       }
     });
 
-    document.getElementById('reset-data-btn').addEventListener('click', () => {
-      if (confirm('Reset all data to default?')) {
-        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        checkedItems = {};
-        saveData();
-        saveCheckedItems();
-        showToast('Data reset to default', 'success');
-        renderMeals();
-        renderShoppingList();
+    document.getElementById('json-file-input').addEventListener('change', (e) => {
+      const fileDisplay = document.getElementById('file-name-display');
+      if (e.target.files.length > 0) {
+        fileDisplay.textContent = `📄 ${e.target.files[0].name}`;
+        fileDisplay.classList.remove('hidden');
+      } else {
+        fileDisplay.classList.add('hidden');
       }
     });
 
@@ -1159,154 +658,233 @@
       showToast('Download started', 'success');
     });
 
-    // ========================================
-    // INITIALIZE APP
-    // ========================================
-    renderMeals();
-    
-    // ========================================
-    // SWIPE GESTURES WITH FINGER TRACKING
-    // ========================================
+    document.getElementById('reset-data-btn').addEventListener('click', () => {
+      if (confirm('Reset all data to default?')) {
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        checkedItems = {};
+        saveData();
+        saveCheckedItems();
+        showToast('Data reset to default', 'success');
+        renderMeals();
+        renderShoppingList();
+      }
+    });
+
+    // SWIPE GESTURES WITH SMOOTH FINGER TRACKING
     let touchStartX = 0;
     let touchStartY = 0;
+    let currentX = 0;
     let isDragging = false;
-    let currentTranslate = 0;
     
-    // Recipe Modal Swipe (Right to Close)
+    // Recipe Modal Swipe Right to Close
     const recipeModal = document.getElementById('recipe-modal');
-    const modalContent = recipeModal.querySelector('div');
     
     recipeModal.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       isDragging = false;
-      recipeModal.classList.remove('animating');
     });
     
     recipeModal.addEventListener('touchmove', (e) => {
-      if (!isDragging) {
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        const deltaX = e.touches[0].clientX - touchStartX;
-        
-        // Only start dragging if horizontal movement is dominant
-        if (Math.abs(deltaX) > deltaY && deltaX > 10) {
-          isDragging = true;
-        }
+      const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+      const deltaX = e.touches[0].clientX - touchStartX;
+      
+      if (!isDragging && Math.abs(deltaX) > deltaY && deltaX > 10) {
+        isDragging = true;
       }
       
-      if (isDragging) {
-        const deltaX = e.touches[0].clientX - touchStartX;
-        // Only allow right swipe (positive deltaX)
-        if (deltaX > 0) {
-          currentTranslate = deltaX;
-          recipeModal.style.transform = `translateX(${deltaX}px)`;
-          recipeModal.style.opacity = 1 - (deltaX / window.innerWidth) * 0.5;
-        }
+      if (isDragging && deltaX > 0) {
+        currentX = deltaX;
+        recipeModal.style.transform = `translateX(${deltaX}px)`;
+        recipeModal.style.opacity = 1 - (deltaX / window.innerWidth) * 0.5;
       }
     });
     
-    recipeModal.addEventListener('touchend', (e) => {
+    recipeModal.addEventListener('touchend', () => {
       if (isDragging) {
-        recipeModal.classList.add('animating');
+        recipeModal.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
         
-        // If swiped more than 40% of screen width, close
-        if (currentTranslate > window.innerWidth * 0.4) {
+        if (currentX > window.innerWidth * 0.4) {
           recipeModal.style.transform = 'translateX(100%)';
           recipeModal.style.opacity = '0';
           setTimeout(() => {
             closeRecipeModal();
             recipeModal.style.transform = '';
             recipeModal.style.opacity = '';
+            recipeModal.style.transition = '';
           }, 300);
         } else {
-          // Snap back
           recipeModal.style.transform = '';
           recipeModal.style.opacity = '';
+          setTimeout(() => {
+            recipeModal.style.transition = '';
+          }, 300);
         }
         
         isDragging = false;
-        currentTranslate = 0;
+        currentX = 0;
       }
     });
     
-    // Tab Switching Swipe
+    // Tab Swipe Gestures
     const tabOrder = ['meals', 'shopping', 'settings'];
-    const appContainer = document.getElementById('app');
-    let tabTouchStartX = 0;
-    let tabTouchStartY = 0;
-    let isTabDragging = false;
+    let tabStartX = 0;
+    let tabStartY = 0;
+    let isTabSwiping = false;
+    let tabDeltaX = 0;
     
-    appContainer.addEventListener('touchstart', (e) => {
-      // Don't interfere with modal
+    const tabContainer = document.querySelector('.flex-1.overflow-hidden');
+    
+    tabContainer.addEventListener('touchstart', (e) => {
       if (!recipeModal.classList.contains('hidden')) return;
       
-      tabTouchStartX = e.touches[0].clientX;
-      tabTouchStartY = e.touches[0].clientY;
-      isTabDragging = false;
+      tabStartX = e.touches[0].clientX;
+      tabStartY = e.touches[0].clientY;
+      isTabSwiping = false;
     });
     
-    appContainer.addEventListener('touchmove', (e) => {
+    tabContainer.addEventListener('touchmove', (e) => {
       if (!recipeModal.classList.contains('hidden')) return;
       
-      if (!isTabDragging) {
-        const deltaY = Math.abs(e.touches[0].clientY - tabTouchStartY);
-        const deltaX = e.touches[0].clientX - tabTouchStartX;
+      const deltaY = Math.abs(e.touches[0].clientY - tabStartY);
+      const deltaX = e.touches[0].clientX - tabStartX;
+      
+      if (!isTabSwiping && Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 15) {
+        isTabSwiping = true;
         
-        if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
-          isTabDragging = true;
+        const currentIndex = tabOrder.indexOf(currentTab);
+        const currentPanel = document.getElementById(`${currentTab}-tab`);
+        
+        if (deltaX < 0) {
+          const nextIndex = (currentIndex + 1) % tabOrder.length;
+          const nextPanel = document.getElementById(`${tabOrder[nextIndex]}-tab`);
+          nextPanel.classList.remove('hidden');
+          nextPanel.style.transform = 'translateX(100%)';
+          nextPanel.style.opacity = '0';
+        } else {
+          const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+          const prevPanel = document.getElementById(`${tabOrder[prevIndex]}-tab`);
+          prevPanel.classList.remove('hidden');
+          prevPanel.style.transform = 'translateX(-100%)';
+          prevPanel.style.opacity = '0';
         }
       }
       
-      if (isTabDragging) {
-        const deltaX = e.touches[0].clientX - tabTouchStartX;
-        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
+      if (isTabSwiping) {
+        tabDeltaX = e.touches[0].clientX - tabStartX;
+        const currentPanel = document.getElementById(`${currentTab}-tab`);
+        const currentIndex = tabOrder.indexOf(currentTab);
+        const screenWidth = window.innerWidth;
         
-        // Apply transform with resistance at edges
-        const resistance = 0.5;
-        currentTabPanel.style.transform = `translateX(${deltaX * resistance}px)`;
-        currentTabPanel.style.opacity = 1 - Math.abs(deltaX) / window.innerWidth * 0.3;
+        currentPanel.style.transform = `translateX(${tabDeltaX}px)`;
+        currentPanel.style.opacity = 1 - Math.abs(tabDeltaX) / screenWidth * 0.5;
+        
+        if (tabDeltaX < 0) {
+          const nextIndex = (currentIndex + 1) % tabOrder.length;
+          const nextPanel = document.getElementById(`${tabOrder[nextIndex]}-tab`);
+          nextPanel.style.transform = `translateX(${screenWidth + tabDeltaX}px)`;
+          nextPanel.style.opacity = Math.abs(tabDeltaX) / screenWidth;
+        } else {
+          const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+          const prevPanel = document.getElementById(`${tabOrder[prevIndex]}-tab`);
+          prevPanel.style.transform = `translateX(${-screenWidth + tabDeltaX}px)`;
+          prevPanel.style.opacity = Math.abs(tabDeltaX) / screenWidth;
+        }
       }
     });
     
-    appContainer.addEventListener('touchend', (e) => {
+    tabContainer.addEventListener('touchend', () => {
       if (!recipeModal.classList.contains('hidden')) return;
       
-      if (isTabDragging) {
-        const deltaX = tabTouchStartX - e.changedTouches[0].clientX;
-        const currentTabPanel = document.getElementById(`${currentTab}-tab`);
-        currentTabPanel.classList.add('animating');
+      if (isTabSwiping) {
+        const currentPanel = document.getElementById(`${currentTab}-tab`);
+        const currentIndex = tabOrder.indexOf(currentTab);
+        const screenWidth = window.innerWidth;
+        const threshold = screenWidth * 0.3;
         
-        // Threshold: 30% of screen width
-        const threshold = window.innerWidth * 0.3;
+        currentPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
         
-        if (Math.abs(deltaX) > threshold) {
-          // Complete the swipe
-          if (deltaX > 0) {
-            // Swiped left - next tab
-            const currentIndex = tabOrder.indexOf(currentTab);
+        if (Math.abs(tabDeltaX) > threshold) {
+          if (tabDeltaX < 0) {
             const nextIndex = (currentIndex + 1) % tabOrder.length;
-            switchTab(tabOrder[nextIndex]);
+            const nextPanel = document.getElementById(`${tabOrder[nextIndex]}-tab`);
+            nextPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
+            
+            currentPanel.style.transform = `translateX(-${screenWidth}px)`;
+            currentPanel.style.opacity = '0';
+            nextPanel.style.transform = 'translateX(0)';
+            nextPanel.style.opacity = '1';
+            
+            setTimeout(() => {
+              switchTab(tabOrder[nextIndex]);
+              currentPanel.style.transform = '';
+              currentPanel.style.opacity = '';
+              currentPanel.style.transition = '';
+              nextPanel.style.transform = '';
+              nextPanel.style.opacity = '';
+              nextPanel.style.transition = '';
+            }, 300);
           } else {
-            // Swiped right - previous tab
-            const currentIndex = tabOrder.indexOf(currentTab);
             const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
-            switchTab(tabOrder[prevIndex]);
+            const prevPanel = document.getElementById(`${tabOrder[prevIndex]}-tab`);
+            prevPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
+            
+            currentPanel.style.transform = `translateX(${screenWidth}px)`;
+            currentPanel.style.opacity = '0';
+            prevPanel.style.transform = 'translateX(0)';
+            prevPanel.style.opacity = '1';
+            
+            setTimeout(() => {
+              switchTab(tabOrder[prevIndex]);
+              currentPanel.style.transform = '';
+              currentPanel.style.opacity = '';
+              currentPanel.style.transition = '';
+              prevPanel.style.transform = '';
+              prevPanel.style.opacity = '';
+              prevPanel.style.transition = '';
+            }, 300);
           }
         } else {
-          // Snap back
-          currentTabPanel.style.transform = '';
-          currentTabPanel.style.opacity = '';
+          currentPanel.style.transform = '';
+          currentPanel.style.opacity = '';
+          
+          if (tabDeltaX < 0) {
+            const nextIndex = (currentIndex + 1) % tabOrder.length;
+            const nextPanel = document.getElementById(`${tabOrder[nextIndex]}-tab`);
+            nextPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
+            nextPanel.style.transform = 'translateX(100%)';
+            nextPanel.style.opacity = '0';
+            setTimeout(() => {
+              nextPanel.classList.add('hidden');
+              nextPanel.style.transform = '';
+              nextPanel.style.opacity = '';
+              nextPanel.style.transition = '';
+            }, 300);
+          } else {
+            const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+            const prevPanel = document.getElementById(`${tabOrder[prevIndex]}-tab`);
+            prevPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease-out';
+            prevPanel.style.transform = 'translateX(-100%)';
+            prevPanel.style.opacity = '0';
+            setTimeout(() => {
+              prevPanel.classList.add('hidden');
+              prevPanel.style.transform = '';
+              prevPanel.style.opacity = '';
+              prevPanel.style.transition = '';
+            }, 300);
+          }
+          
+          setTimeout(() => {
+            currentPanel.style.transition = '';
+          }, 300);
         }
         
-        setTimeout(() => {
-          currentTabPanel.classList.remove('animating');
-          currentTabPanel.style.transform = '';
-          currentTabPanel.style.opacity = '';
-        }, 300);
-        
-        isTabDragging = false;
+        isTabSwiping = false;
+        tabDeltaX = 0;
       }
     });
+
+    renderMeals();
   </script>
 </body>
 </html>
