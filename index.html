@@ -79,6 +79,26 @@
 
     .recipe-modal {
       animation: slideUp 0.3s ease-out;
+      transition: transform 0.3s ease-out;
+    }
+
+    .recipe-modal.swipe-out {
+      animation: none;
+      transform: translateX(100%);
+    }
+
+    .tab-panel {
+      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    }
+
+    .tab-panel.swipe-left {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    .tab-panel.swipe-right {
+      transform: translateX(100%);
+      opacity: 0;
     }
 
     @keyframes slideUp {
@@ -909,6 +929,72 @@
     // INITIALIZE APP
     // ========================================
     renderMeals();
+    
+    // ========================================
+    // SWIPE GESTURES
+    // ========================================
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
+    
+    const minSwipeDistance = 50;
+    
+    function handleSwipe(element, onSwipeLeft, onSwipeRight) {
+      element.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+      });
+      
+      element.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = Math.abs(touchEndY - touchStartY);
+        
+        // Ignore if vertical swipe is dominant
+        if (deltaY > Math.abs(deltaX)) return;
+        
+        if (deltaX > minSwipeDistance && onSwipeRight) {
+          onSwipeRight();
+        } else if (deltaX < -minSwipeDistance && onSwipeLeft) {
+          onSwipeLeft();
+        }
+      });
+    }
+    
+    // Recipe modal swipe
+    const recipeModal = document.getElementById('recipe-modal');
+    handleSwipe(recipeModal, null, () => {
+      recipeModal.classList.add('swipe-out');
+      setTimeout(() => {
+        closeRecipeModal();
+        recipeModal.classList.remove('swipe-out');
+      }, 300);
+    });
+    
+    // Tab switching swipe
+    const tabOrder = ['meals', 'shopping', 'settings'];
+    
+    handleSwipe(document.getElementById('app'), 
+      // Swipe left - next tab
+      () => {
+        if (document.getElementById('recipe-modal').classList.contains('hidden')) {
+          const currentIndex = tabOrder.indexOf(currentTab);
+          const nextIndex = (currentIndex + 1) % tabOrder.length;
+          switchTab(tabOrder[nextIndex]);
+        }
+      },
+      // Swipe right - previous tab
+      () => {
+        if (document.getElementById('recipe-modal').classList.contains('hidden')) {
+          const currentIndex = tabOrder.indexOf(currentTab);
+          const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+          switchTab(tabOrder[prevIndex]);
+        }
+      }
+    );
   </script>
 </body>
 </html>
