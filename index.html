@@ -20,32 +20,29 @@
         h1 { font-size: 1.5rem; color: var(--primary); }
         .container { padding: 20px; max-width: 600px; margin: 0 auto; }
         
-        /* Tabs */
         .tab-nav { position: fixed; bottom: 0; width: 100%; display: flex; background: var(--card-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; }
         .tab-btn { flex: 1; padding: 15px; border: none; background: none; font-size: 1rem; font-weight: bold; color: var(--text-light); cursor: pointer; }
         .tab-btn.active { color: var(--primary); border-top: 3px solid var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Meal Cards */
+        .meal-time-header { font-size: 1.4rem; color: var(--text); margin: 30px 0 15px; padding-bottom: 5px; border-bottom: 2px solid var(--primary); }
+        
         .meal-card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .meal-tag { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; color: #fff; }
-        .tag-meat { background: #e74c3c; } .tag-meatless { background: #2ecc71; } .tag-wildcard { background: #f39c12; }
+        .tag-meat { background: #e74c3c; } .tag-meatless { background: #2ecc71; } .tag-wildcard { background: #f39c12; } .tag-standard { background: #3498db; }
         .meal-title { font-size: 1.3rem; margin-bottom: 10px; }
         .meal-pic { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #eee; }
         .section-title { font-size: 1.1rem; margin: 15px 0 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         ul, ol { margin-left: 20px; margin-bottom: 15px; color: #555; }
         li { margin-bottom: 5px; }
         
-        /* Bulking Note */
         .bulking-note { background: #e8f8f5; border-left: 4px solid var(--primary); padding: 10px; font-size: 0.9rem; margin-bottom: 15px; }
 
-        /* Rating System */
         .rating-box { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
         .rating-slider { width: 60%; }
         .rating-value { font-weight: bold; color: var(--primary); }
         
-        /* Shopping List */
         .shop-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .shop-item input[type="checkbox"] { margin-right: 15px; transform: scale(1.3); }
         .shop-item.checked span { text-decoration: line-through; color: var(--text-light); }
@@ -62,12 +59,12 @@
 
     <div class="container">
         <div id="meals-tab" class="tab-content active">
-            <p style="margin-bottom: 20px; color: #666;">Here are your 3 daily options. Ingredients are ordered to use perishables (like fresh greens/fish) early in the week.</p>
+            <p style="margin-bottom: 10px; color: #666;">Your full day of meals. Ingredients are prioritized to use perishables early in the week.</p>
             <div id="meals-container"></div>
         </div>
 
         <div id="shopping-tab" class="tab-content">
-            <p style="margin-bottom: 20px; color: #666;">Trader Joe's List (59th St). Automatically generated based on your top-rated selections for the week.</p>
+            <p style="margin-bottom: 20px; color: #666;">Trader Joe's List (59th St). Automatically pulls ingredients for breakfast, lunch, snacks, and your top-rated dinner options.</p>
             <div id="shopping-list-container"></div>
             <button class="btn-action" onclick="app.generateNewWeek()">Generate Next Week's Plan</button>
         </div>
@@ -80,77 +77,26 @@
 
     <script>
         // --- MEAL DATABASE ---
-        // perishability: 1 (use immediately, e.g., delicate greens, fresh fish) to 5 (pantry staples)
         const mealDatabase = [
-            {
-                id: "m1", type: "meat", name: "Lemon Herb Chicken & Quinoa", perishability: 3, 
-                img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["3 lbs Chicken Breast", "2 cups Quinoa", "1 lb Green Beans", "2 Lemons", "Olive Oil", "Oregano"],
-                recipe: ["Cook quinoa according to package.", "Marinate chicken in olive oil, lemon juice, and oregano.", "Roast chicken and green beans at 400°F for 25 mins."],
-                bulkNote: "For 19M: Add 2 tbsp olive oil to your quinoa portion and a large handful of walnuts for +400 clean, plant-based calories."
-            },
-            {
-                id: "m2", type: "meatless", name: "Creamy Tomato Red Lentil Pasta", perishability: 4,
-                img: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["2 boxes TJ's Red Lentil Pasta", "2 jars Marinara Sauce", "1 bag Fresh Spinach", "1 tub Cashew Cream (or heavy cream)"],
-                recipe: ["Boil pasta.", "Heat marinara, stir in cashew cream for richness.", "Fold in fresh spinach until wilted, then mix with pasta."],
-                bulkNote: "For 19M: Red lentil pasta is a massive protein cheat code. Eat a double portion for ~40g plant protein."
-            },
-            {
-                id: "m3", type: "wildcard", name: "Soyaki Salmon Rice Bowls", perishability: 1,
-                img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["5 Salmon Fillets", "1 bottle TJ's Soyaki Sauce", "3 cups Jasmine Rice", "1 bag Broccoli Florets", "1 Avocado"],
-                recipe: ["Marinate salmon in Soyaki.", "Cook rice.", "Steam broccoli.", "Bake salmon at 400°F for 12-15 mins. Serve in bowls topped with avocado."],
-                bulkNote: "For 19M: Swap salmon for 1 block of Extra Firm Tofu (pressed, cubed, baked in Soyaki). Add a full half-avocado for healthy fats."
-            },
-            {
-                id: "m4", type: "meat", name: "Turkey Meatball Sweet Potato Mash", perishability: 3,
-                img: "https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["2 packs TJ's Turkey Meatballs", "4 large Sweet Potatoes", "1 bag Brussels Sprouts", "Butter/Vegan Butter"],
-                recipe: ["Boil and mash sweet potatoes.", "Roast halved Brussels sprouts with olive oil at 400°F for 20 mins.", "Heat meatballs in sauce or plain, serve over mash."],
-                bulkNote: "For 19M: Eat meatballs if flexible, otherwise sub with 1 can of chickpeas roasted with the sprouts. Heavy on the sweet potato for complex carbs."
-            },
-            {
-                id: "m5", type: "meatless", name: "Black Bean & Sweet Corn Quesadillas", perishability: 4,
-                img: "https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["2 packs Large Tortillas", "2 cans Black Beans (rinsed)", "1 bag Frozen Roasted Corn", "1 pack Mexican Blend Cheese (or Vegan Shreds)", "Mild Salsa"],
-                recipe: ["Mash half the black beans, mix with whole beans and corn.", "Spread mixture and cheese on tortillas.", "Grill in a pan until golden and crispy."],
-                bulkNote: "For 19M: Load yours with vegan shreds and add a massive side of guacamole (avocado) for dense caloric intake."
-            },
-            {
-                id: "m6", type: "wildcard", name: "Mediterranean Hummus Flatbreads", perishability: 2,
-                img: "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["2 packs TJ's Flatbread/Naan", "2 tubs Hummus", "1 pack Cherry Tomatoes", "1 Cucumber", "Kalamata Olives", "Feta Cheese (Optional)"],
-                recipe: ["Toast flatbreads.", "Spread a thick layer of hummus.", "Top with diced cucumber, halved tomatoes, and olives."],
-                bulkNote: "For 19M: Hummus is highly caloric and great for bulking. Eat 1.5 flatbreads heavily loaded with hummus and olive oil."
-            },
-            {
-                id: "m7", type: "meat", name: "One-Pan Chicken Sausage & Veggies", perishability: 3,
-                img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=500&q=60", // Placeholder
-                ingredients: ["2 packs TJ's Chicken Sausage", "2 Bell Peppers", "1 Red Onion", "1 lb Baby Potatoes"],
-                recipe: ["Chop everything into bite-sized pieces.", "Toss with olive oil, salt, and pepper.", "Roast on a sheet pan at 400°F for 30 minutes."],
-                bulkNote: "For 19M: Swap chicken sausage for TJ's Vegan Italian Sausage. Eat an extra serving of olive-oil soaked potatoes."
-            },
-            {
-                id: "m8", type: "meatless", name: "Peanut Butter Tofu Stir-fry", perishability: 2,
-                img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=60",
-                ingredients: ["2 blocks Extra Firm Tofu", "1 bag Stir-fry Veggie Mix", "Peanut Butter", "Soy Sauce", "Udon Noodles"],
-                recipe: ["Press and cube tofu, pan-fry until crispy.", "Mix 1/2 cup peanut butter with soy sauce and warm water for sauce.", "Stir fry veggies, add noodles, tofu, and sauce."],
-                bulkNote: "For 19M: This is your ultimate bulking meal. The peanut butter and tofu combo is incredibly calorie and protein-dense."
-            },
-            {
-                id: "m9", type: "wildcard", name: "Gnocchi with Pesto and Peas", perishability: 3,
-                img: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=500&q=60", // Placeholder
-                ingredients: ["3 packs TJ's Cauliflower Gnocchi", "1 jar Vegan Pesto", "1 bag Frozen Peas", "Pine Nuts"],
-                recipe: ["Pan-fry gnocchi in oil until crispy (don't boil!).", "Thaw peas under warm water.", "Toss gnocchi with pesto, peas, and top with pine nuts."],
-                bulkNote: "For 19M: Pine nuts and pesto (olive oil/nuts) are great for adding ethical weight. Eat a large portion."
-            }
+            // BREAKFASTS
+            { id: "b1", category: "breakfast", name: "Family Oatmeal Bar", perishability: 5, img: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=500&q=60", ingredients: ["Rolled Oats", "Almond Milk", "Frozen Blueberries", "Chia Seeds"], recipe: ["Boil oats with milk.", "Stir in frozen berries until thawed.", "Top with chia seeds."], bulkNote: "For 19M: Eat 1.5 cups dry oats and stir in 2 large scoops of peanut butter while hot for massive calories." },
+            
+            // LUNCHES
+            { id: "l1", category: "lunch", name: "Loaded Wraps & Fruit", perishability: 3, img: "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=500&q=60", ingredients: ["Large Tortillas", "Deli Turkey", "Hummus", "Spinach", "Apples"], recipe: ["Spread hummus on tortillas.", "Layer spinach and turkey (or extra hummus for vegan).", "Serve with sliced apples."], bulkNote: "For 19M: Use 3 tortillas. Skip turkey, double the hummus, and add a heavy drizzle of olive oil inside the wrap." },
+
+            // SNACKS
+            { id: "s1", category: "snack", name: "Rice Cakes & Nut Butter", perishability: 5, img: "https://images.unsplash.com/photo-1604085792782-8d92f276d7d8?auto=format&fit=crop&w=500&q=60", ingredients: ["Rice Cakes", "Peanut or Almond Butter", "Bananas"], recipe: ["Spread thick nut butter on rice cakes.", "Top with banana slices."], bulkNote: "For 19M: Eat 4 of these. Pure, clean carbs and healthy fats." },
+
+            // DINNERS
+            { id: "d1", category: "dinner", type: "meat", name: "Lemon Herb Chicken & Quinoa", perishability: 3, img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=500&q=60", ingredients: ["3 lbs Chicken Breast", "2 cups Quinoa", "1 lb Green Beans", "Olive Oil"], recipe: ["Cook quinoa.", "Roast chicken and green beans at 400°F for 25 mins."], bulkNote: "For 19M: Add 2 tbsp olive oil to your quinoa portion and walnuts for +400 calories." },
+            { id: "d2", category: "dinner", type: "meatless", name: "Creamy Tomato Red Lentil Pasta", perishability: 4, img: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=500&q=60", ingredients: ["2 boxes TJ's Red Lentil Pasta", "2 jars Marinara Sauce", "1 tub Cashew Cream"], recipe: ["Boil pasta.", "Heat marinara, stir in cashew cream.", "Mix with pasta."], bulkNote: "For 19M: Eat a double portion. Red lentil pasta is a protein powerhouse." },
+            { id: "d3", category: "dinner", type: "wildcard", name: "Soyaki Salmon Rice Bowls", perishability: 1, img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=500&q=60", ingredients: ["5 Salmon Fillets", "TJ's Soyaki Sauce", "Jasmine Rice", "Broccoli", "Avocado"], recipe: ["Marinate salmon.", "Cook rice and broccoli.", "Bake salmon at 400°F."], bulkNote: "For 19M: Swap salmon for baked Soyaki Tofu. Add a full half-avocado." }
         ];
 
         // --- APP LOGIC ---
         const app = {
             state: {
-                currentWeek: [], // Array of daily options
+                currentWeek: [],
                 ratings: JSON.parse(localStorage.getItem('mealRatings')) || {},
                 shoppingList: JSON.parse(localStorage.getItem('shoppingList')) || []
             },
@@ -158,11 +104,8 @@
             init() {
                 document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                 
-                // Check if we have a current week plan saved
                 const savedWeek = JSON.parse(localStorage.getItem('currentWeek'));
                 const weekTimestamp = localStorage.getItem('weekTimestamp');
-                
-                // If no plan, or plan is older than 7 days, generate new
                 const isExpired = weekTimestamp && (Date.now() - weekTimestamp > 7 * 24 * 60 * 60 * 1000);
                 
                 if (!savedWeek || isExpired) {
@@ -175,24 +118,23 @@
             },
 
             generateNewWeek() {
-                // We pick 7 meat, 7 meatless, 7 wildcards. 
-                // For a full year app, you'd have a bigger database. Here we loop/reuse based on ratings.
                 let weekPlan = [];
-                
                 for(let i=0; i<7; i++) {
-                    let dailyMeals = {
-                        meat: this.pickMeal('meat'),
-                        meatless: this.pickMeal('meatless'),
-                        wildcard: this.pickMeal('wildcard')
-                    };
-                    weekPlan.push(dailyMeals);
+                    weekPlan.push({
+                        breakfast: this.pickMeal('breakfast'),
+                        lunch: this.pickMeal('lunch'),
+                        snack: this.pickMeal('snack'),
+                        dinner: {
+                            meat: this.pickMeal('dinner', 'meat'),
+                            meatless: this.pickMeal('dinner', 'meatless'),
+                            wildcard: this.pickMeal('dinner', 'wildcard')
+                        }
+                    });
                 }
 
-                // Sort the days so highly perishable meals (perishability 1 or 2) happen earlier in the week.
-                // We base a day's perishability on the most perishable option in that day.
                 weekPlan.sort((a, b) => {
-                    let minA = Math.min(a.meat.perishability, a.meatless.perishability, a.wildcard.perishability);
-                    let minB = Math.min(b.meat.perishability, b.meatless.perishability, b.wildcard.perishability);
+                    let minA = Math.min(a.dinner.meat.perishability, a.dinner.meatless.perishability, a.dinner.wildcard.perishability, a.breakfast.perishability);
+                    let minB = Math.min(b.dinner.meat.perishability, b.dinner.meatless.perishability, b.dinner.wildcard.perishability, b.breakfast.perishability);
                     return minA - minB; 
                 });
 
@@ -203,38 +145,34 @@
                 this.generateShoppingList();
                 this.renderTodayMeals();
                 this.switchTab('meals');
-                alert("New weekly plan generated! Perishables sorted for early in the week.");
+                alert("New weekly plan generated! Includes Breakfast, Lunch, Dinner, and Snacks.");
             },
 
-            pickMeal(type) {
-                // Filter by type
-                let options = mealDatabase.filter(m => m.type === type);
-                
-                // Weight selection by rating (default rating is 5)
+            pickMeal(category, type = null) {
+                let options = mealDatabase.filter(m => m.category === category && (!type || m.type === type));
+                if(options.length === 0) return null;
+
                 let weightedOptions = [];
                 options.forEach(meal => {
                     let rating = this.state.ratings[meal.id] || 5;
-                    // Add meal to array 'rating' number of times (higher rating = more likely to be picked)
-                    for(let i=0; i<rating; i++) {
-                        weightedOptions.push(meal);
-                    }
+                    for(let i=0; i<rating; i++) weightedOptions.push(meal);
                 });
 
-                let randomIndex = Math.floor(Math.random() * weightedOptions.length);
-                return weightedOptions[randomIndex];
+                return weightedOptions[Math.floor(Math.random() * weightedOptions.length)];
             },
 
             generateShoppingList() {
-                // To prevent waste, we assume you buy ingredients for the highest-rated option of each day
                 let list = [];
                 this.state.currentWeek.forEach(day => {
-                    let bestMeal = [day.meat, day.meatless, day.wildcard].reduce((prev, current) => {
-                        let prevRating = this.state.ratings[prev.id] || 5;
-                        let currRating = this.state.ratings[current.id] || 5;
-                        return (currRating > prevRating) ? current : prev;
+                    // Get highest rated dinner to buy ingredients for
+                    let bestDinner = [day.dinner.meat, day.dinner.meatless, day.dinner.wildcard].reduce((prev, current) => {
+                        return (this.state.ratings[current.id] || 5) > (this.state.ratings[prev.id] || 5) ? current : prev;
                     });
                     
-                    bestMeal.ingredients.forEach(ing => {
+                    // Combine all ingredients for the day
+                    let dailyIngredients = [...day.breakfast.ingredients, ...day.lunch.ingredients, ...day.snack.ingredients, ...bestDinner.ingredients];
+                    
+                    dailyIngredients.forEach(ing => {
                         if (!list.includes(ing)) list.push(ing);
                     });
                 });
@@ -256,73 +194,77 @@
                 this.renderShoppingList();
             },
 
+            createMealHTML(meal, tagOverride = 'standard') {
+                if(!meal) return '';
+                let currentRating = this.state.ratings[meal.id] || 5;
+                let tagClass = 'tag-' + tagOverride;
+                let tagText = tagOverride.toUpperCase();
+
+                return `
+                    <div class="meal-card">
+                        <span class="meal-tag ${tagClass}">${tagText}</span>
+                        <h2 class="meal-title">${meal.name}</h2>
+                        <img src="${meal.img}" class="meal-pic" alt="${meal.name}">
+                        
+                        <div class="bulking-note"><strong>Ethical Bulking Note:</strong><br> ${meal.bulkNote}</div>
+                        
+                        <h3 class="section-title">Ingredients</h3>
+                        <ul>${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                        
+                        <h3 class="section-title">Instructions</h3>
+                        <ol>${meal.recipe.map(i => `<li>${i}</li>`).join('')}</ol>
+
+                        <div class="rating-box">
+                            <span>Rate this meal:</span>
+                            <input type="range" min="1" max="10" value="${currentRating}" class="rating-slider" 
+                                onchange="app.updateRating('${meal.id}', this.value)"
+                                oninput="document.getElementById('rating-val-${meal.id}').innerText = this.value + '/10'">
+                            <span class="rating-value" id="rating-val-${meal.id}">${currentRating}/10</span>
+                        </div>
+                    </div>
+                `;
+            },
+
             renderTodayMeals() {
                 const container = document.getElementById('meals-container');
-                // Get 'today' based on day of week (0-6)
-                const dayIndex = new Date().getDay(); 
-                const todayOptions = this.state.currentWeek[dayIndex];
-
+                const todayOptions = this.state.currentWeek[new Date().getDay()];
                 if(!todayOptions) return;
 
-                let html = '';
-                ['meat', 'meatless', 'wildcard'].forEach(type => {
-                    let meal = todayOptions[type];
-                    let currentRating = this.state.ratings[meal.id] || 5;
-                    let tagClass = 'tag-' + type;
+                let html = `
+                    <h2 class="meal-time-header">🌅 Breakfast</h2>
+                    ${this.createMealHTML(todayOptions.breakfast)}
 
-                    html += `
-                        <div class="meal-card">
-                            <span class="meal-tag ${tagClass}">${type.toUpperCase()}</span>
-                            <h2 class="meal-title">${meal.name}</h2>
-                            <img src="${meal.img}" class="meal-pic" alt="${meal.name}">
-                            
-                            <div class="bulking-note">
-                                <strong>Ethical Bulking Note:</strong><br> ${meal.bulkNote}
-                            </div>
+                    <h2 class="meal-time-header">🥪 Lunch</h2>
+                    ${this.createMealHTML(todayOptions.lunch)}
 
-                            <h3 class="section-title">Ingredients</h3>
-                            <ul>${meal.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+                    <h2 class="meal-time-header">🍎 Snack</h2>
+                    ${this.createMealHTML(todayOptions.snack)}
 
-                            <h3 class="section-title">Instructions</h3>
-                            <ol>${meal.recipe.map(i => `<li>${i}</li>`).join('')}</ol>
-
-                            <div class="rating-box">
-                                <span>Rate this meal:</span>
-                                <input type="range" min="1" max="10" value="${currentRating}" class="rating-slider" 
-                                    onchange="app.updateRating('${meal.id}', this.value)"
-                                    oninput="document.getElementById('rating-val-${meal.id}').innerText = this.value + '/10'">
-                                <span class="rating-value" id="rating-val-${meal.id}">${currentRating}/10</span>
-                            </div>
-                        </div>
-                    `;
-                });
+                    <h2 class="meal-time-header">🍽️ Dinner Options (Pick 1)</h2>
+                    ${this.createMealHTML(todayOptions.dinner.meat, 'meat')}
+                    ${this.createMealHTML(todayOptions.dinner.meatless, 'meatless')}
+                    ${this.createMealHTML(todayOptions.dinner.wildcard, 'wildcard')}
+                `;
                 container.innerHTML = html;
             },
 
             renderShoppingList() {
                 const container = document.getElementById('shopping-list-container');
-                let html = '';
-                this.state.shoppingList.forEach((item, index) => {
-                    html += `
-                        <label class="shop-item ${item.checked ? 'checked' : ''}">
-                            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="app.toggleShopItem(${index})">
-                            <span>${item.name}</span>
-                        </label>
-                    `;
-                });
-                container.innerHTML = html;
+                container.innerHTML = this.state.shoppingList.map((item, index) => `
+                    <label class="shop-item ${item.checked ? 'checked' : ''}">
+                        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="app.toggleShopItem(${index})">
+                        <span>${item.name}</span>
+                    </label>
+                `).join('');
             },
 
             switchTab(tab) {
-                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-                document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-                
+                document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
                 document.getElementById(tab + '-tab').classList.add('active');
                 event.currentTarget.classList.add('active');
             }
         };
 
-        // Boot app
         app.init();
     </script>
 </body>
